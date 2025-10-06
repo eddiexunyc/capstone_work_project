@@ -5,6 +5,8 @@ import numpy as np
 import pandas as pd
 import yfinance as yf
 import datetime
+import warnings
+warnings.filterwarnings('ignore')
 
 def pull_data(start_date, end_date):
     
@@ -14,30 +16,31 @@ def pull_data(start_date, end_date):
                    'WMT', 'LLY', 'V', 'MA', 'NFLX', 
                    'XOM', 'JNJ', 'ABBV', 'PLTR', 'COST', 
                    'HD', 'BAC', 'PG', 'UNH', 'GE']
-    
-    data_field='Adj Close'
+
 
     # check if the ticker exists
     if not ticker_list:
         print("No ticker found.")
         return None
 
-    print(f"\nDownloading {data_field} data for the top {len(ticker_list)} companies...")
+    print(f"\nDownloading data for the top {len(ticker_list)} companies...")
 
     try:
-        data = yf.download(ticker_list, start=start_date, end=end_date, progress=True, group_by='ticker')
-        
-        # Filter by specific data field (e.g., 'Adj Close')
-        if data_field:
-            if data_field in data.columns.levels[0]:
-                data = data[data_field]
-            else:
-                print(f"Warning: '{data_field}' not found in downloaded data. Returning full dataset.")
-
+        data = yf.download(ticker_list, start=start_date, end=end_date, auto_adjust=False, group_by='ticker')
     
+        # change the multiIndex format to single column data frame for ease of usage
+        fin_tidy_data = data.stack(level=0).reset_index()
+        fin_tidy_data = fin_tidy_data.rename(columns={'level_1': 'Ticker'})
+        fin_tidy_data['Date'] = pd.to_datetime(fin_tidy_data['Date'])
+        fin_tidy_data = fin_tidy_data.sort_values(by=['Ticker', 'Date'])
+
+        # calculate simple returns and log returns per ticker
+        fin_tidy_data['Return'] = fin_tidy_data.groupby('Ticker')['Adj Close'].pct_change()
+        fin_tidy_data['Log_Return'] = np.log1p(fin_tidy_data['Return'])
 
         # Save to CSV
         data.to_csv('Resources/historical_stock_data.csv', index = False)
+        fin_tidy_data.to_csv('Resources/pre_processing_data.csv',index = False)
 
         return data
 

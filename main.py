@@ -1,5 +1,12 @@
-import stock_data_extraction
+
+# load libraries
 import datetime
+import numpy as np
+import pandas as pd
+
+# load other python files
+import stock_data_extraction
+import traditional_regression
 
 def main():
 
@@ -7,6 +14,7 @@ def main():
     start_date = datetime.datetime(2015, 9, 30)
     end_date = datetime.datetime(2025, 9, 30)   
 
+    # extract the data
     data = stock_data_extraction.pull_data(start_date, end_date)
 
 if __name__=="__main__":
