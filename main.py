@@ -1,10 +1,10 @@
 
-# load libraries
+# load core packages
 import datetime
 import numpy as np
 import pandas as pd
 
-# load other python files
+# load other python modules
 import stock_data_extraction
 import traditional_regression
 import deep_quantile_regression

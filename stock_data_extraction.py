@@ -1,11 +1,12 @@
 # This python file will be extracting daily historical stock prices of 10 years for top 25 companies in the S&P500
 
-# load libraries
+# load packages
 import numpy as np
 import pandas as pd
 import yfinance as yf
 import datetime
 import warnings
+
 warnings.filterwarnings('ignore')
 
 def pull_data(start_date, end_date):

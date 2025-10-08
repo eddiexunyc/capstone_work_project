@@ -1,0 +1,20 @@
+---
+title: "DATA 698: Exploratory Data Analysis on Historical Data"
+format: html
+editor: source
+author: Eddie Xu
+---
+
+```{python}
+# load dependencies
+import numpy as np
+import pandas as pd
+import cvxpy as cp
+import matplotlib.pyplot as plt
+import datetime as dt
+from scipy.stats import norm 
+
+# data financial libraries
+import yfinance as yf
+import quantstats as qs
+```
