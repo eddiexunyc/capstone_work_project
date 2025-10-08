@@ -7,6 +7,7 @@ import pandas as pd
 # load other python files
 import stock_data_extraction
 import traditional_regression
+import deep_quantile_regression
 
 def main():
 
