@@ -9,7 +9,7 @@ import warnings
 
 warnings.filterwarnings('ignore')
 
-def pull_data(start_date, end_date):
+def pull_data(start_date, end_date, file_name):
     
     # define the top 25 companies in the S&P 500 by weight based on the link below: https://www.slickcharts.com/sp500
     ticker_list = ['NVDA', 'MSFT', 'AAPL', 'AMZN', 'META',
@@ -40,11 +40,11 @@ def pull_data(start_date, end_date):
         fin_tidy_data['Log_Return'] = np.log1p(fin_tidy_data['Return'])
 
         # Save to CSV
-        data.to_csv('Resources/historical_stock_data.csv', index = False)
-        fin_tidy_data.to_csv('Resources/pre_processing_data.csv',index = False)
+        fin_tidy_data.to_csv(file_name,index = False)
 
         return data
 
     except Exception as e:
         print(f"Error downloading data: {e}")
         return None
+
