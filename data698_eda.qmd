@@ -14,4 +14,15 @@ import datetime as dt
 ```
 
 ```{python}
+history_data_url = 'https://raw.githubusercontent.com/eddiexunyc/capstone_work_project/refs/heads/main/Resources/pre_processing_data.csv'
+actual_data_url = 'https://raw.githubusercontent.com/eddiexunyc/capstone_work_project/refs/heads/main/Resources/actual_stock_data.csv'
+```
+
+```{python}
+history_data = pd.read_csv(history_data_url)
+actual_data = pd.read_csv(actual_data_url)
+```
+
+```{python}
+
 ```
