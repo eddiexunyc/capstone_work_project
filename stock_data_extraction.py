@@ -36,8 +36,8 @@ def pull_data(start_date, end_date, file_name):
         fin_tidy_data = fin_tidy_data.sort_values(by=['Ticker', 'Date'])
 
         # calculate simple returns and log returns per ticker
-        fin_tidy_data['Return'] = fin_tidy_data.groupby('Ticker')['Adj Close'].pct_change()
-        fin_tidy_data['Log_Return'] = np.log1p(fin_tidy_data['Return'])
+        # fin_tidy_data['Return'] = fin_tidy_data.groupby('Ticker')['Adj Close'].pct_change()
+        # fin_tidy_data['Log_Return'] = np.log1p(fin_tidy_data['Return'])
 
         # Save to CSV
         fin_tidy_data.to_csv(file_name,index = False)

@@ -24,5 +24,12 @@ actual_data = pd.read_csv(actual_data_url)
 ```
 
 ```{python}
+history_data.describe()
+print(history_data.dtypes)
+print(history_data)
+```
 
+```{python}
+actual_data.describe()
+print(actual_data)
 ```

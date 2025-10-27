@@ -17,9 +17,9 @@ def main():
     historical_file_name = 'Resources/pre_processing_data.csv'
 
     # set the data interval of 6 months (March 2025 - September 2025)
-    actual_start_date = datetime.datetime(2025, 3, 31)
-    actual_end_date = datetime.datetime(2025, 9, 30)
-    actual_file_name = 'Resources/actual_stock_data.csv'
+    actual_start_date = datetime.datetime(2025, 4, 1)
+    actual_end_date = datetime.datetime(2025, 5, 31)
+    actual_file_name = 'Resources/actual_stock_data_v2.csv'
 
 
     # extract the data for historical and actual stock data
