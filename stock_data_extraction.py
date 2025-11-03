@@ -47,4 +47,23 @@ def pull_data(start_date, end_date, file_name):
     except Exception as e:
         print(f"Error downloading data: {e}")
         return None
+    
+def main():
+
+    # set the date interval of 10 years (March 2015 - March 2025)
+    start_date = datetime.datetime(2015, 3, 31)
+    end_date = datetime.datetime(2025, 3, 31)
+    historical_file_name = 'Resources/historical_stock_data.csv'
+
+    # set the data interval of 6 months (March 2025 - September 2025)
+    actual_start_date = datetime.datetime(2025, 4, 1)
+    actual_end_date = datetime.datetime(2025, 5, 31)
+    actual_file_name = 'Resources/actual_stock_data_v2.csv'
+
+    # extract the data for historical and actual stock data
+    historical_data = pull_data(start_date, end_date, historical_file_name)
+    actual_data = pull_data(actual_start_date, actual_end_date, actual_file_name)
+
+if __name__=="__main__":
+    main()
 

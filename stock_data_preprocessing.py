@@ -33,6 +33,11 @@ def stock_preprocessing(data):
     data['MACD'] = ema12 - ema26
     data['Signal_Line'] = data['MACD'].ewm(span=9, adjust=False).mean()
 
+    return data
+
 def vif_calculation(data):
-    x = data
+    feature_data = data[['Lagged_Returns', 'RSI', 'SMA_20', 'MACD']]
+    vif_data = pd.DataFrame()
+    vif_data['feature'] = feature_data.columns
+    vif_data['VIF'] = [variance_inflation_factor(feature_data.values, i) for i in range(feature_data.shape[1])]
 

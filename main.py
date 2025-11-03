@@ -6,6 +6,7 @@ import pandas as pd
 
 # load other python modules
 import stock_data_extraction
+import stock_data_preprocessing
 # import traditional_regression (numpy issues)
 # import deep_quantile_regression (numpy issues)
 
@@ -20,7 +21,6 @@ def main():
     actual_start_date = datetime.datetime(2025, 4, 1)
     actual_end_date = datetime.datetime(2025, 5, 31)
     actual_file_name = 'Resources/actual_stock_data_v2.csv'
-
 
     # extract the data for historical and actual stock data
     historical_data = stock_data_extraction.pull_data(start_date, end_date, historical_file_name)
