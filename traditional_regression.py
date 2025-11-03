@@ -1,4 +1,4 @@
-# Traditional Regression Models
+# This python file will define all traditional regression models
 
 # load core packages
 import numpy as np
@@ -18,8 +18,8 @@ from sklearn.metrics import mean_squared_error
 # load support vector regression packages
 from sklearn.svm import SVR
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import mean_squared_error
 
+# create multivariate linear regression function
 def stock_price_linear_reg(data):
     
     # define x and y variables
@@ -40,3 +40,14 @@ def stock_price_linear_reg(data):
 
     # calculate r-squared
     r2_score(y_test, predictions)
+
+# create multivariate polynomial regression function
+def stock_price_poly_reg(data):
+
+    x = data
+
+def stock_price_rf_reg(data):
+    x = data
+
+def stock_price_svm_reg(data):
+    x = data

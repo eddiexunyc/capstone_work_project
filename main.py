@@ -14,7 +14,7 @@ def main():
     # set the date interval of 10 years (March 2015 - March 2025)
     start_date = datetime.datetime(2015, 3, 31)
     end_date = datetime.datetime(2025, 3, 31)
-    historical_file_name = 'Resources/pre_processing_data.csv'
+    historical_file_name = 'Resources/historical_stock_data.csv'
 
     # set the data interval of 6 months (March 2025 - September 2025)
     actual_start_date = datetime.datetime(2025, 4, 1)

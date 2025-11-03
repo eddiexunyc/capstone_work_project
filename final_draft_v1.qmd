@@ -86,6 +86,7 @@ To assess and evaluate the predictive performance for all regression models, var
 - R Squared: the coefficient of determination. It is used to explain how well the model fits the data
 - Pinball Loss or Quantile Loss: the evaluation metric that is specifically designed for Deep Quantile Regression. It measures how well the predicted quantiles align with the actual outcomes
 
+## Discussion of Results
 
 ## Conclusion
 
