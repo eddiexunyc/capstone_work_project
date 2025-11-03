@@ -11,25 +11,50 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import datetime as dt
+import seaborn as sns
+import plotly.express as px
+import matplotlib.dates as mdates
 ```
 
 ```{python}
-history_data_url = 'https://raw.githubusercontent.com/eddiexunyc/capstone_work_project/refs/heads/main/Resources/pre_processing_data.csv'
-actual_data_url = 'https://raw.githubusercontent.com/eddiexunyc/capstone_work_project/refs/heads/main/Resources/actual_stock_data.csv'
+history_data_url = 'https://raw.githubusercontent.com/eddiexunyc/capstone_work_project/refs/heads/main/Resources/historical_stock_data.csv?token=GHSAT0AAAAAADKDZNSYNLHMK3JS6HWNDL4Y2IIDJKQ'
+
 ```
 
 ```{python}
+# pull in data and check the data types
 history_data = pd.read_csv(history_data_url)
-actual_data = pd.read_csv(actual_data_url)
-```
-
-```{python}
 history_data.describe()
 print(history_data.dtypes)
 print(history_data)
 ```
 
 ```{python}
-actual_data.describe()
-print(actual_data)
+history_data.isnull().sum()
+```
+
+```{python}
+history_data.nunique()
+```
+
+```{python}
+for col in history_data.columns:
+    print(f"{col}: {history_data[col].value_counts().get('unknown', 0)} unknowns")
+```
+
+```{python}
+# histogram on numerical variables
+num_cols = history_data.select_dtypes(include=np.number).columns.tolist()
+history_data[num_cols].hist(bins=20, figsize=(12, 8), color='skyblue')
+plt.suptitle("Histograms of Numerical Variables")
+plt.tight_layout()
+plt.show()
+```
+
+```{python}
+# create a correlation heat map 
+stock_correlation = history_data.corr(numeric_only=True)
+sns.heatmap(stock_correlation, annot=True, cmap="coolwarm")
+plt.title("Correlation Heatmap of Historical Stock Price Data")
+plt.show()
 ```
