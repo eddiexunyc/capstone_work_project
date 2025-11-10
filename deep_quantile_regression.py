@@ -1,45 +1,75 @@
-# ulitities python file
+# load core python packages
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+
+# load deep quantile regression packages
 import tensorflow as tf
-import yfinance as yf
-import datetime
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
 
-# 1. Data Generation (Example)
-np.random.seed(0)
-X = np.random.rand(1000, 5)
-y = 2 * X[:, 0] + 3 * X[:, 1]**2 + np.random.normal(0, 0.5 + X[:, 0], 1000)
+def deep_quantile_regression(data):
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    # define x and y variables
+    x = data[['Open', 'High', 'Low', 'Close', 'Volume', 'Lagged_Returns', 'RSI', 'SMA_20', 'MACD']].values
+    y = data['Adj Close'].values
 
-# 2. Define Quantile Loss
-def quantile_loss(q, y_true, y_pred):
-    err = y_true - y_pred
-    return tf.reduce_mean(tf.maximum(q * err, (q - 1) * err))
+    # split train data into 70% for training and 30% for tuning and performance
+    x_train, x_temp, y_train, y_temp = train_test_split(x, y, test_size=0.3,random_state=42)
 
-# 3. Build and Train Model for a specific quantile (e.g., 0.5 for median)
-q_value = 0.5
+    # split the 30% for tuning and performance into 15% validation and 15% test
+    x_val, x_test, y_val, y_test = train_test_split(x_temp, y_temp, test_size=0.5, random_state=42)
 
-model = tf.keras.Sequential([
-    tf.keras.layers.Dense(64, activation='relu', input_shape=(X_train.shape[1],)),
-    tf.keras.layers.Dense(32, activation='relu'),
-    tf.keras.layers.Dense(1) # Output for the specific quantile
-])
+    # normalize the data
+    scaler = StandardScaler()
+    x_train_scaled = scaler.fit_transform(x_train)
+    x_test_scaled = scaler.transform(x_test)
+    x_val_scaled = scaler.transform(x_val)
 
-model.compile(optimizer='adam', loss=lambda y_true, y_pred: quantile_loss(q_value, y_true, y_pred))
 
-model.fit(X_train, y_train, epochs=50, batch_size=32, verbose=0)
+    # define Quantile Loss
+    def quantile_loss(q, y_true, y_pred):
+        err = y_true - y_pred
+        return tf.reduce_mean(tf.maximum(q * err, (q - 1) * err))
 
-# 4. Make Predictions
-y_pred_median = model.predict(X_test)
-print(y_pred_median)
+    # build and train Model for a specific quantile (e.g., 0.5 for median)
+    q_value = 0.5
 
-def stock_data_pull():
-    #
-    start_date = datetime.datetime(2019, 5, 31)
-    end_date = datetime.datetime(2021, 1, 30)
-    meta = yf.Ticker("META")
-    data = meta.history(start=start_date, end=end_date)
-    print(data.to_string())
+    model = tf.keras.Sequential([
+        tf.keras.layers.Dense(64, activation='relu', input_shape=(x_train_scaled.shape[1],)),
+        tf.keras.layers.Dense(32, activation='relu'),
+        tf.keras.layers.Dense(1) # Output for the specific quantile
+    ])
+
+    model.compile(optimizer='adam', loss=lambda y_true, y_pred: quantile_loss(0.5, y_true, y_pred))
+
+    history = model.fit(
+        x_train_scaled, y_train,
+        validation_data=(x_val_scaled, y_val),
+        epochs=50,
+        batch_size=32,
+        verbose=1
+    )
+
+    # 7. Evaluate and predict
+    y_pred = model.predict(x_test_scaled)
+
+    # 8. Compute validation and test losses
+    val_loss = model.evaluate(x_val_scaled, y_val, verbose=0)
+    test_loss = model.evaluate(x_test_scaled, y_test, verbose=0)
+
+    print(f"Validation Loss: {val_loss:.4f}")
+    print(f"Test Loss: {test_loss:.4f}")
+
+    return model, scaler, y_pred, history
+
+def main():
+
+     # read in data
+    pre_process_url = 'https://raw.githubusercontent.com/eddiexunyc/capstone_work_project/refs/heads/main/Resources/pre_process_data_v2.csv'
+    pre_process_data = pd.read_csv(pre_process_url)
+
+    deep_quantile_prediction = deep_quantile_regression(pre_process_data)
+
+if __name__=="__main__":
+    main()
