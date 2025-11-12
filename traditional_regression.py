@@ -23,14 +23,20 @@ from sklearn.svm import SVR
 def stock_price_linear_reg(data):
     
     # define x and y variables
-    x = data[['Open', 'High', 'Low', 'Close', 'Volume', 'Lagged_Returns', 'RSI', 'SMA_20', 'MACD']].values
-    y = data[['Adj Close']].values
+    features = ['Open', 'High', 'Low', 'Close', 'Volume', 'Lagged_Returns', 'RSI', 'SMA_20', 'MACD']
+    x = data[features].values
+    y = data['Adj Close'].values
+
+    ticker_labels = data['Ticker'].values
+    dates = data['Date'].values if 'Date' in data.columns else np.arange(len(data))
 
     # split train data into 70% for training and 30% for tuning and performance
-    x_train, x_temp, y_train, y_temp = train_test_split(x, y, test_size=0.3,random_state=42)
+    x_train, x_temp, y_train, y_temp, ticker_train, ticker_temp, date_train, date_temp = train_test_split(
+        x, y, ticker_labels, dates, test_size=0.3, random_state=42)
 
     # split the 30% for tuning and performance into 15% validation and 15% test
-    x_val, x_test, y_val, y_test = train_test_split(x_temp, y_temp, test_size=0.5, random_state=42)
+    x_val, x_test, y_val, y_test, ticker_val, ticker_test, date_val, date_test = train_test_split(
+        x_temp, y_temp, ticker_temp, date_temp, test_size=0.5, random_state=42)
 
     # deploy linear regression
     lm = LinearRegression()
@@ -73,17 +79,23 @@ def stock_price_linear_reg(data):
 def stock_price_poly_reg(data):
 
     # define x and y variables
-    x = data[['Open', 'High', 'Low', 'Close', 'Volume', 'Lagged_Returns', 'RSI', 'SMA_20', 'MACD']].values
-    y = data[['Adj Close']].values
+    features = ['Open', 'High', 'Low', 'Close', 'Volume', 'Lagged_Returns', 'RSI', 'SMA_20', 'MACD']
+    x = data[features].values
+    y = data['Adj Close'].values
 
-    # set the degree to 2 to reduce overfitting
-    poly_feature = PolynomialFeatures(degree=2)
+    ticker_labels = data['Ticker'].values
+    dates = data['Date'].values if 'Date' in data.columns else np.arange(len(data))
 
     # split train data into 70% for training and 30% for tuning and performance
-    x_train, x_temp, y_train, y_temp = train_test_split(x, y, test_size=0.3,random_state=42)
+    x_train, x_temp, y_train, y_temp, ticker_train, ticker_temp, date_train, date_temp = train_test_split(
+        x, y, ticker_labels, dates, test_size=0.3, random_state=42)
 
     # split the 30% for tuning and performance into 15% validation and 15% test
-    x_val, x_test, y_val, y_test = train_test_split(x_temp, y_temp, test_size=0.5, random_state=42)
+    x_val, x_test, y_val, y_test, ticker_val, ticker_test, date_val, date_test = train_test_split(
+        x_temp, y_temp, ticker_temp, date_temp, test_size=0.5, random_state=42)
+    
+    # set the degree to 2 to reduce overfitting
+    poly_feature = PolynomialFeatures(degree=2)
 
     # train the data
     x_train_quad = poly_feature.fit_transform(x_train)
@@ -128,15 +140,21 @@ def stock_price_poly_reg(data):
 
 def stock_price_rf_reg(data):
 
-    # define x and y variables
-    x = data[['Open', 'High', 'Low', 'Close', 'Volume', 'Lagged_Returns', 'RSI', 'SMA_20', 'MACD']].values
+    ## define x and y variables
+    features = ['Open', 'High', 'Low', 'Close', 'Volume', 'Lagged_Returns', 'RSI', 'SMA_20', 'MACD']
+    x = data[features].values
     y = data['Adj Close'].values
 
+    ticker_labels = data['Ticker'].values
+    dates = data['Date'].values if 'Date' in data.columns else np.arange(len(data))
+
     # split train data into 70% for training and 30% for tuning and performance
-    x_train, x_temp, y_train, y_temp = train_test_split(x, y, test_size=0.3,random_state=42)
+    x_train, x_temp, y_train, y_temp, ticker_train, ticker_temp, date_train, date_temp = train_test_split(
+        x, y, ticker_labels, dates, test_size=0.3, random_state=42)
 
     # split the 30% for tuning and performance into 15% validation and 15% test
-    x_val, x_test, y_val, y_test = train_test_split(x_temp, y_temp, test_size=0.5, random_state=42)
+    x_val, x_test, y_val, y_test, ticker_val, ticker_test, date_val, date_test = train_test_split(
+        x_temp, y_temp, ticker_temp, date_temp, test_size=0.5, random_state=42)
 
     # normalize the data
     scaler = StandardScaler()
@@ -172,14 +190,20 @@ def stock_price_rf_reg(data):
 def stock_price_svr_reg(data):
     
     # define x and y variables
-    x = data[['Open', 'High', 'Low', 'Close', 'Volume', 'Lagged_Returns', 'RSI', 'SMA_20', 'MACD']].values
+    features = ['Open', 'High', 'Low', 'Close', 'Volume', 'Lagged_Returns', 'RSI', 'SMA_20', 'MACD']
+    x = data[features].values
     y = data['Adj Close'].values
 
+    ticker_labels = data['Ticker'].values
+    dates = data['Date'].values if 'Date' in data.columns else np.arange(len(data))
+
     # split train data into 70% for training and 30% for tuning and performance
-    x_train, x_temp, y_train, y_temp = train_test_split(x, y, test_size=0.3,random_state=42)
+    x_train, x_temp, y_train, y_temp, ticker_train, ticker_temp, date_train, date_temp = train_test_split(
+        x, y, ticker_labels, dates, test_size=0.3, random_state=42)
 
     # split the 30% for tuning and performance into 15% validation and 15% test
-    x_val, x_test, y_val, y_test = train_test_split(x_temp, y_temp, test_size=0.5, random_state=42)
+    x_val, x_test, y_val, y_test, ticker_val, ticker_test, date_val, date_test = train_test_split(
+        x_temp, y_temp, ticker_temp, date_temp, test_size=0.5, random_state=42)
 
     # normalize the data
     scaler = StandardScaler()
@@ -213,7 +237,6 @@ def stock_price_svr_reg(data):
     print(f"RSME: {rmse}")
 
 
-
 def main():
 
     # read in data
@@ -221,12 +244,10 @@ def main():
     pre_process_data = pd.read_csv(pre_process_url)
 
     # run the mulitvariate linear regression
-    # lm_result = stock_price_linear_reg(pre_process_data)
-    # print(lm_result)
+    lm_result = stock_price_linear_reg(pre_process_data)
 
     # run the multivariate polynomial regression
-    # poly_result = stock_price_poly_reg(pre_process_data)
-    # print(poly_result)
+    poly_result = stock_price_poly_reg(pre_process_data)
 
     # run the random forest regression
     rf_result = stock_price_rf_reg(pre_process_data)

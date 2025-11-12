@@ -29,8 +29,7 @@ def deep_quantile_regression(data):
 
     # split the 30% for tuning and performance into 15% validation and 15% test
     x_val, x_test, y_val, y_test, ticker_val, ticker_test, date_val, date_test = train_test_split(
-        x_temp, y_temp, ticker_temp, date_temp, test_size=0.5, random_state=42
-    )
+        x_temp, y_temp, ticker_temp, date_temp, test_size=0.5, random_state=42)
 
     # normalize the data
     scaler = StandardScaler()
