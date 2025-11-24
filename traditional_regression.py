@@ -19,11 +19,29 @@ from sklearn.metrics import mean_squared_error
 # load upport vector regression packages
 from sklearn.svm import SVR
 
+# define features that will be used on all regression models
+features = ['Open', 'High', 'Low', 'Close', 'Volume', 'Lagged_Returns', 'RSI', 'SMA_20', 'MACD']
+
+# create a 30 days forecasting dataframe function
+def forecasting_dataframe(data):
+
+    # define the list and forecasting date
+    future_df_list = []
+    forecast_dates = pd.date_range(start='2025-04-01', end='2025-04-30', freq='B')
+    
+    for company in data['Ticker'].unique():
+        last_row = data[data['Ticker'] == company].iloc[-1]
+        for fdate in forecast_dates:
+            row = last_row.copy()
+            row['Date'] = fdate
+            future_df_list.append(row)
+
+    return pd.DataFrame(future_df_list)
+
 # create multivariate linear regression function
 def stock_price_linear_reg(data):
     
     # define x and y variables
-    features = ['Open', 'High', 'Low', 'Close', 'Volume', 'Lagged_Returns', 'RSI', 'SMA_20', 'MACD']
     x = data[features].values
     y = data['Adj Close'].values
 
@@ -58,28 +76,31 @@ def stock_price_linear_reg(data):
     # calculate r-squared on test set
     r2 = r2_score(y_test, test_prediction)
 
-    # calculate the score and coeffiecient
-    train_score = lm.score(x_train, y_train)
-    coef = lm.coef_
+    # create dataframe for linear regression metric
+    result_lm = pd.DataFrame([{
+        'Model': 'Multivariate Linear Regression',
+        'Root Mean Squared Error': rmse,
+        'Mean Absolute Error': mae}])
+    
+    # provide the future predicted value
+    future_df = forecasting_dataframe(data)
+    x_future = future_df[features].values
 
-    # return value need to fix later
-    return {
-        'validation_predictions': valid_prediction,
-        'test_predictions': test_prediction,
-        'coefficients': coef,
-        'train_score': train_score,
-        'test_mse': mse,
-        'test_rmse': rmse,
-        'test_r2_score': r2,
-        'test_mae': mae
-    }
+    lm_prediction = future_df[['Ticker', 'Date']].copy()
+    lm_prediction['Predicted_AdjClose'] = lm.predict(x_future)
+    lm_prediction = lm_prediction.sort_values(['Ticker', 'Date']).reset_index(drop=True)
+
+    # save predictions to CSV
+    lm_file_name = 'Resources/Predictions/lm_prediction.csv'
+    lm_prediction.to_csv(lm_file_name, index=False)
+
+    return result_lm
 
 
 # create multivariate polynomial regression function
 def stock_price_poly_reg(data):
 
     # define x and y variables
-    features = ['Open', 'High', 'Low', 'Close', 'Volume', 'Lagged_Returns', 'RSI', 'SMA_20', 'MACD']
     x = data[features].values
     y = data['Adj Close'].values
 
@@ -116,32 +137,34 @@ def stock_price_poly_reg(data):
     # calculate root mean squared error on test set
     rmse = np.sqrt(mse)
     
-    # calculate r-squared on test set
-    r2 = r2_score(y_test, test_prediction)
-
     # calculate mean absolute error on test set
     mae = mean_absolute_error(y_test, test_prediction) 
 
-    # calculate the score and coeffiecient
-    train_score = poly_lm.score(x_train_quad, y_train)
-    coef = poly_lm.coef_
+    # create a dataframe for polynonimal regression metric
+    result_poly = pd.DataFrame([{
+        'Model': 'Multivariate Polynomial Regression',
+        'Root Mean Squared Error': rmse,
+        'Mean Absolute Error': mae}])
+    
+    # provide the future predicted value
+    future_df = forecasting_dataframe(data)
+    x_future = future_df[features].values
+    x_future_quad = poly_feature.transform(x_future)
 
-    # return value need to fix later
-    return {
-        'validation_predictions': valid_prediction,
-        'test_predictions': test_prediction,
-        'coefficients': coef,
-        'train_score': train_score,
-        'test_mse': mse,
-        'test_rmse': rmse,
-        'test_r2_score': r2_score,
-        'test_mae': mae
-    }
+    poly_prediction = future_df[['Ticker', 'Date']].copy()
+    poly_prediction['Predicted_AdjClose'] = poly_lm.predict(x_future_quad)
+    poly_prediction = poly_prediction.sort_values(['Ticker', 'Date']).reset_index(drop=True)
 
+    # save predictions to CSV
+    poly_file_name = 'Resources/Predictions/poly_prediction.csv'
+    poly_prediction.to_csv(poly_file_name, index=False)
+    
+    return result_poly
+
+# create random forest regression function
 def stock_price_rf_reg(data):
 
-    ## define x and y variables
-    features = ['Open', 'High', 'Low', 'Close', 'Volume', 'Lagged_Returns', 'RSI', 'SMA_20', 'MACD']
+    # define x and y variables
     x = data[features].values
     y = data['Adj Close'].values
 
@@ -182,11 +205,28 @@ def stock_price_rf_reg(data):
     # calculate mean absolute error on test set
     mae = mean_absolute_error(y_test, test_prediction) 
 
-    print(f"Mean Absolute Error: {mae}")
-    print(f"Mean Squared Error: {mse}")
-    print(f"R2 Score: {r2}")
-    print(f"RSME: {rmse}")
+    # create a dataframe for random forest regression metric
+    result_rf = pd.DataFrame([{
+        'Model': 'Random Forest Regression',
+        'Root Mean Squared Error': rmse,
+        'Mean Absolute Error': mae}])
+    
+    # provide the predicted value
+    future_df = forecasting_dataframe(data)
+    x_future = scaler.transform(future_df[features].values)
 
+    rf_prediction = future_df[['Ticker', 'Date']].copy()
+    rf_prediction['Predicted_AdjClose'] = rf100.predict(x_future)
+    rf_prediction = rf_prediction.sort_values(['Ticker', 'Date']).reset_index(drop=True)
+
+    # save predictions to CSV
+    rf_file_name = 'Resources/Predictions/rf_prediction.csv'
+    rf_prediction.to_csv(rf_file_name, index=False)
+
+    return result_rf
+
+
+# create support vector regression function
 def stock_price_svr_reg(data):
     
     # define x and y variables
@@ -231,11 +271,25 @@ def stock_price_svr_reg(data):
     # calculate mean absolute error on test set
     mae = mean_absolute_error(y_test, test_prediction) 
 
-    print(f"Mean Absolute Error: {mae}")
-    print(f"Mean Squared Error: {mse}")
-    print(f"R2 Score: {r2}")
-    print(f"RSME: {rmse}")
+    # create a dataframe for support vector regression metric
+    result_svr = pd.DataFrame([{
+        'Model': 'Support Vector Regression',
+        'Root Mean Squared Error': rmse,
+        'Mean Absolute Error': mae}])
+    
+    # provide the predicted values
+    future_df = forecasting_dataframe(data)
+    x_future = scaler.transform(future_df[features].values)
 
+    svr_prediction = future_df[['Ticker', 'Date']].copy()
+    svr_prediction['Predicted_AdjClose'] = svr.predict(x_future)
+    svr_prediction = svr_prediction.sort_values(['Ticker', 'Date']).reset_index(drop=True)
+
+    # save predictions to CSV
+    svr_file_name = 'Resources/Predictions/svr_prediction.csv'
+    svr_prediction.to_csv(svr_file_name, index=False)
+
+    return result_svr
 
 def main():
 
@@ -254,6 +308,17 @@ def main():
 
     # run the support vector regression
     svr_result = stock_price_svr_reg(pre_process_data)
+
+    # combine the evaluation metrics from all regressions
+    summary = pd.concat([
+        pd.DataFrame(lm_result, columns=['Model', 'Root Mean Squared Error', 'Mean Absolute Error']),
+        pd.DataFrame(poly_result, columns=['Model', 'Root Mean Squared Error', 'Mean Absolute Error']),
+        pd.DataFrame(rf_result, columns=['Model', 'Root Mean Squared Error', 'Mean Absolute Error']),
+        pd.DataFrame(svr_result,columns=['Model', 'Root Mean Squared Error', 'Mean Absolute Error'])])
+    
+    summary = summary.sort_values(by="Model", ascending=False).reset_index(drop=True)
+    summary.to_csv('Resources/Predictions/summary_metric.csv', index=False)
+    print(summary)
 
     
 if __name__=="__main__":

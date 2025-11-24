@@ -17,7 +17,7 @@ import matplotlib.dates as mdates
 ```
 
 ```{python}
-history_data_url = 'https://raw.githubusercontent.com/eddiexunyc/capstone_work_project/refs/heads/main/Resources/historical_stock_data.csv'
+history_data_url = 'https://raw.githubusercontent.com/eddiexunyc/capstone_work_project/refs/heads/main/Resources/historical_stock_data.csv?token=GHSAT0AAAAAADKDZNSYNLHMK3JS6HWNDL4Y2IIDJKQ'
 
 ```
 
@@ -49,7 +49,6 @@ history_data[num_cols].hist(bins=20, figsize=(12, 8), color='skyblue')
 plt.suptitle("Histograms of Numerical Variables")
 plt.tight_layout()
 plt.show()
-
 ```
 
 ```{python}

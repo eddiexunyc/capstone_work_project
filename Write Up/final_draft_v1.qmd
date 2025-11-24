@@ -51,7 +51,7 @@ Research question: To what extent does Deep Quantile Regression outperform tradi
 
 ## Data Sources and Variables
 
-For this research, the primary data source is the historical daily stock price data for a selected group of publicly traded companies and was obtained from Yahoo Finance. Yahoo Finance is selected to ensure consistent, reliable, and reproducible data collection. Since the platform maintains continuous historical data, it is expected that the dataset will contain the fundamental stock information and will not have any missing or unknown data. The selected companies are the top 25 companies of the S&P 500 index, based on the market capitalization. This approach captures a diverse representation of different industries and company types. To facilitate model development and evaluation, the data set was divided into two subsets. The first subset covers the period from March 2015 to March 2025, and it comprises of 61,489 observations. This subset was used for the training and testing purposes, providing a robust size for Deep Quantile Regression and traditional regression model comparisons. The second subset covers the period from April 2025 to May 2025, and it comprises of 3,150 observations. This subset is served as a validation period and was compared to the predicted value in the same timeframe. 
+For this research, the primary data source will be the historical daily stock price data for a selected group of publicly traded companies and will be obtained from Yahoo Finance. Yahoo Finance is selected to ensure consistent, reliable, and reproducible data collection. Since the platform maintains continuous historical data, it is expected that the dataset will contain the fundamental stock information and will not have any missing or unknown data. The selected companies will be the top 25 companies of the S&P 500 index, based on the market capitalization. This will capture a diverse representation of different industries and company types. To facilitate model development and evaluation, the data set will be divided into two subsets. The first subset covers the period from March 2015 to March 2025, and it comprises of 61,489 observations. This subset will be used for the training and testing purposes, providing a robust size for Deep Quantile Regression and traditional regression model comparisons. The second subset covers the period from April 2025 to May 2025, and it comprises of 3,150 observations. This subset will be served as a validation period and will be compared to the predicted value in the same timeframe. 
 
 The dataset contains 10 numerical columns, and it includes key variables that are needed for both Deep Quantile Regression and traditional regression models to forecasting future stock price. The key variables are defined as below:
 
@@ -66,13 +66,8 @@ The dataset contains 10 numerical columns, and it includes key variables that ar
 
 ## Statistical Methods
 
-For statistical methodology, the approach is a comparative analysis between traditional regression models and Deep Quantile Regression. Unlike traditional regression models where it output a single conditional mean prediction, Deep Quantile Regression applies the quantile loss or pinball function to directly estimate specific quantiles. Because of that, this allows the model to provide a better understanding of the full distribution of the target variable, which is useful in stock price prediction. By applying both traditional regression models and Deep Quantile Regression to the same dataset, this research examines and evaluates the strengths and limitations of each approach on stock price prediction.
-Exploratory data analysis was performed to assess data quality and gain data insights before the preprocessing and regression model approaches.
-
-```{python}
-vif_result = 
-```
-
+For statistical methodology, the approach will be a comparative analysis between traditional regression models and Deep Quantile Regression. Unlike traditional regression models where it output a single conditional mean prediction, Deep Quantile Regression applies the quantile loss or pinball function to directly estimate specific quantiles. Because of that, this allows the model to provide a better understanding of the full distribution of the target variable, which is useful in stock price prediction. By applying both traditional regression models and Deep Quantile Regression to the same dataset, this research examines and evaluates the strengths and limitations of each approach on stock price prediction.
+Exploratory data analysis will be performed to assess data quality and gain data insights before the preprocessing and regression model approaches. The descriptive statistics and visual analysis will be applied on the dataset to assess the distribution and variability of the key variables. In addition, correlation and covariance analysis will be conducted to determine any existing correlations among key variables. The analysis will identify any potential multicollinearity that impact the model’s performance.
 The dataset will be preprocessed for model development and evaluation. Multiple features will be engineered from the historical daily stock data to capture multiple financial factors that may influence future stock price movements. This will enable the models to be trained on various aspects of market complexity. The following features are defined as below:
 
 - Lagged Returns: the percentage change in the adjusted closing price of a stock from the prior day
@@ -82,7 +77,7 @@ The dataset will be preprocessed for model development and evaluation. Multiple 
 
 Since Deep Quantile Regression, Random Forest Regression, and Support Vector Regression are being compared in this research, all variables will be standardized using the z-score normalization to ensure equal feature contribution. From there, the dataset will be split into three subsets. 70% of the data will be used for model training, 15% for hyperparameter tuning, and the remaining 15% for the final performance evaluation. This will ensure that the assessment will be robust and unbiased on all models’ predictive performance.
 
-For the modeling approach, the predictive performance of Deep Quantile Regression will be evaluated and compared against traditional regression models. The input variable for all models will be the constructed features including the lagged return, trading volume, and the target variable will be the adjustedclosing price for future time horizons of 30 days. For Deep Quantile Regression, the lagged return will be inputted into the feedforward neural network with 2 hidden layers, and the outcome will be the quantiles of the 30-days predicted closing prices. The same set of input feature will also be used and trained into the traditional regression models including Multivariate Linear Regression, Multivariate Polynomial Regression, Random Forest Regression, and Support Vector Regression. Each model will be trained independently, ensuring consistency. From there, it will display a direct comparison of each model’s learning ability on historical stock price and predictive capability on forecasting stock prices. 
+For the modeling approach, the predictive performance of Deep Quantile Regression will be evaluated and compared against traditional regression models. The input variable for all models will be the constructed features including the lagged return, trading volume, and the target variable will be the closing price for future time horizons of 30 days. For Deep Quantile Regression, the lagged return will be inputted into the feedforward neural network with 2 hidden layers, and the outcome will be the quantiles of the 30-days predicted closing prices. The same set of input feature will also be used and trained into the traditional regression models including Multivariate Linear Regression, Multivariate Polynomial Regression, Random Forest Regression, and Support Vector Regression. Each model will be trained independently, ensuring consistency. From there, it will display a direct comparison of each model’s learning ability on historical stock price and predictive capability on forecasting stock prices. 
 
 To assess and evaluate the predictive performance for all regression models, various metrics will be used. From there, it will provide a comprehensive evaluation of both point prediction accuracy and uncertainty estimation. The following metrics are defined below:
 
@@ -91,10 +86,8 @@ To assess and evaluate the predictive performance for all regression models, var
 - Pinball Loss or Quantile Loss: the evaluation metric that is specifically designed for Deep Quantile Regression. It measures how well the predicted quantiles align with the actual outcomes
 - Prediction Interval Coverage Probability: the evaluation metric that measures the reliability of prediction intervals
 
+
 ## Discussion of Results
-
-
-
 
 ## Conclusion
 

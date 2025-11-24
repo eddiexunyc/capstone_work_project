@@ -42,6 +42,22 @@ def deep_quantile_regression(data):
     def quantile_loss(q, y_true, y_pred):
         err = y_true - y_pred
         return tf.reduce_mean(tf.maximum(q * err, (q - 1) * err))
+    
+    # define PICP (need to fix later about this)
+    def PICP(q, y_true, y_lower_pred, y_upper_pred):
+        # check which true values fall within the predicted interval
+        is_covered = (y_true >= y_lower_pred) & (y_true <= y_upper_pred)
+        
+        # count the number of covered observations
+        num_covered = np.sum(is_covered)
+        
+        # Total number of observations
+        n = len(y_true)
+        
+        # Calculate PICP
+        picp = num_covered / n
+        
+        return picp 
 
     # run a loop for each quantile
     prediction_result = {}
@@ -86,7 +102,6 @@ def deep_quantile_regression(data):
             'test_loss': test_loss,
             'history': history
         }
-
 
     # provide the future predicted value
     future_df_list = []
