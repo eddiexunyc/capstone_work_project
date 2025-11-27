@@ -22,21 +22,70 @@ from sklearn.svm import SVR
 # define features that will be used on all regression models
 features = ['Open', 'High', 'Low', 'Close', 'Volume', 'Lagged_Returns', 'RSI', 'SMA_20', 'MACD']
 
-# create a 30 days forecasting dataframe function
-def forecasting_dataframe(data):
+# define a function that update the indicators so the indicators won't be constant and allow for an accurate prediction
+def recursive_forecast(data, model, features, scaler=None, transformer=None):
 
-    # define the list and forecasting date
-    future_df_list = []
-    forecast_dates = pd.date_range(start='2025-04-01', end='2025-04-30', freq='B')
-    
-    for company in data['Ticker'].unique():
-        last_row = data[data['Ticker'] == company].iloc[-1]
+    forecast_dates = pd.date_range('2025-04-01', '2025-04-30', freq='B')
+    all_predictions = []
+
+    for ticker in data['Ticker'].unique():
+
+        df = data[data['Ticker'] == ticker].copy()
+        df = df.sort_values("Date").reset_index(drop=True)
+
         for fdate in forecast_dates:
-            row = last_row.copy()
-            row['Date'] = fdate
-            future_df_list.append(row)
 
-    return pd.DataFrame(future_df_list)
+            last_row = df.iloc[-1].copy()
+
+            # predict the future price
+            x_input = last_row[features].values.reshape(1, -1)
+            if transformer:
+                x_input = transformer.transform(x_input)
+            if scaler:
+                x_input = scaler.transform(x_input)
+
+            predicted_price = model.predict(x_input)[0]
+
+            # build the future row
+            new = last_row.copy()
+            new["Date"] = fdate
+            new["Adj Close"] = predicted_price
+
+            # update the technical indicator recursively to provide constant predicted value
+
+            # upate lagged return
+            prev_price = last_row["Adj Close"]
+            new["Lagged_Returns"] = (predicted_price - prev_price) / prev_price
+
+            # update SMA20
+            prices = list(df["Adj Close"]) + [predicted_price]
+            new["SMA_20"] = np.mean(prices[-20:])
+
+            # update RSI
+            if len(prices) >= 15:
+                deltas = np.diff(prices[-15:])
+                ups = deltas[deltas > 0].sum()
+                downs = -deltas[deltas < 0].sum()
+                rs = ups / downs if downs != 0 else 0
+                new["RSI"] = 100 - (100 / (1 + rs))
+            else:
+                new["RSI"] = last_row["RSI"]
+
+            # update MACD
+            ema12 = pd.Series(prices).ewm(span=12).mean().iloc[-1]
+            ema26 = pd.Series(prices).ewm(span=26).mean().iloc[-1]
+            new["MACD"] = ema12 - ema26
+
+            # append predicted row
+            df = pd.concat([df, new.to_frame().T], ignore_index=True)
+
+            all_predictions.append({
+                "Ticker": ticker,
+                "Date": fdate,
+                "Predicted_AdjClose": predicted_price
+            })
+
+    return pd.DataFrame(all_predictions)
 
 # create multivariate linear regression function
 def stock_price_linear_reg(data):
@@ -83,11 +132,7 @@ def stock_price_linear_reg(data):
         'Mean Absolute Error': mae}])
     
     # provide the future predicted value
-    future_df = forecasting_dataframe(data)
-    x_future = future_df[features].values
-
-    lm_prediction = future_df[['Ticker', 'Date']].copy()
-    lm_prediction['Predicted_AdjClose'] = lm.predict(x_future)
+    lm_prediction = recursive_forecast(data, lm, features)
     lm_prediction = lm_prediction.sort_values(['Ticker', 'Date']).reset_index(drop=True)
 
     # save predictions to CSV
@@ -95,7 +140,6 @@ def stock_price_linear_reg(data):
     lm_prediction.to_csv(lm_file_name, index=False)
 
     return result_lm
-
 
 # create multivariate polynomial regression function
 def stock_price_poly_reg(data):
@@ -147,12 +191,7 @@ def stock_price_poly_reg(data):
         'Mean Absolute Error': mae}])
     
     # provide the future predicted value
-    future_df = forecasting_dataframe(data)
-    x_future = future_df[features].values
-    x_future_quad = poly_feature.transform(x_future)
-
-    poly_prediction = future_df[['Ticker', 'Date']].copy()
-    poly_prediction['Predicted_AdjClose'] = poly_lm.predict(x_future_quad)
+    poly_prediction = recursive_forecast(data, poly_lm, features, transformer=poly_feature)
     poly_prediction = poly_prediction.sort_values(['Ticker', 'Date']).reset_index(drop=True)
 
     # save predictions to CSV
@@ -212,13 +251,9 @@ def stock_price_rf_reg(data):
         'Mean Absolute Error': mae}])
     
     # provide the predicted value
-    future_df = forecasting_dataframe(data)
-    x_future = scaler.transform(future_df[features].values)
-
-    rf_prediction = future_df[['Ticker', 'Date']].copy()
-    rf_prediction['Predicted_AdjClose'] = rf100.predict(x_future)
+    rf_prediction = recursive_forecast(data, rf100, features, scaler=scaler)
     rf_prediction = rf_prediction.sort_values(['Ticker', 'Date']).reset_index(drop=True)
-
+    
     # save predictions to CSV
     rf_file_name = 'Resources/Predictions/rf_prediction.csv'
     rf_prediction.to_csv(rf_file_name, index=False)
@@ -278,11 +313,7 @@ def stock_price_svr_reg(data):
         'Mean Absolute Error': mae}])
     
     # provide the predicted values
-    future_df = forecasting_dataframe(data)
-    x_future = scaler.transform(future_df[features].values)
-
-    svr_prediction = future_df[['Ticker', 'Date']].copy()
-    svr_prediction['Predicted_AdjClose'] = svr.predict(x_future)
+    svr_prediction = recursive_forecast(data, svr, features, scaler=scaler)
     svr_prediction = svr_prediction.sort_values(['Ticker', 'Date']).reset_index(drop=True)
 
     # save predictions to CSV
@@ -294,7 +325,7 @@ def stock_price_svr_reg(data):
 def main():
 
     # read in data
-    pre_process_url = 'https://raw.githubusercontent.com/eddiexunyc/capstone_work_project/refs/heads/main/Resources/pre_process_data_v2.csv'
+    pre_process_url = 'https://raw.githubusercontent.com/eddiexunyc/capstone_work_project/refs/heads/main/Resources/Data/pre_process_data_v2.csv'
     pre_process_data = pd.read_csv(pre_process_url)
 
     # run the mulitvariate linear regression
@@ -319,7 +350,6 @@ def main():
     summary = summary.sort_values(by="Model", ascending=False).reset_index(drop=True)
     summary.to_csv('Resources/Predictions/summary_metric.csv', index=False)
     print(summary)
-
     
 if __name__=="__main__":
     main()
