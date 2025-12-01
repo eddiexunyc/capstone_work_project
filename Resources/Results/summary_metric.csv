@@ -1,0 +1,5 @@
+Model,Root Mean Squared Error,Mean Absolute Error
+Support Vector Regression,4.73367151527155,1.3653887920535925
+Random Forest Regression,2.2624388319473896,1.1571285504883628
+Multivariate Polynomial Regression,139.44616306364892,90.81545835971602
+Multivariate Linear Regression,4.745400854794193,3.1170945720244734

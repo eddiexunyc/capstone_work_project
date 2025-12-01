@@ -8,6 +8,12 @@ format:
         code-tools: true
         toc-title: Table of Contents
         toc-location: left
+        typst:
+            papersize: a5
+            margin:
+                x: 1cm
+                y: 1cm
+
 ---
 
 ## Abstract
@@ -52,59 +58,77 @@ Per Zhu, J., He, Y., Yang, X., & Yang, S. (2024) paper, the team examined the ap
 
 Per Lu, S., Xu, Q., Jiang, C., Liu, Y., & Kusiak, A. (2022) paper, the team explored the performance of a Deep Quantile Regression model integrated with non-crossing constraints and sparse-group lasso regularization for probabilistic electric load forecasting. The non-crossing constraint was implemented to ensure that the predicted quantiles remained properly ordered, preventing unrealistic quantile crossing that can occur when each quantile is estimated independently. The sparse-group lasso regularization was introduced to enhance model simplicity by eliminating unimportant signals and emphasizing the most relevant features. The dataset used in the study consisted of daily power usage data from four million households collected between 2016 and 2018 from China’s power supply system database. To evaluate the model’s performance, the team used various metrics including Continuous Ranked Probability Score, Average Quantile Loss, and the Monotonicity of quantile outputs. The approach on Deep Quantile Regression from this study is different from the proposed research in many key aspects. For starters, the model in their study is more complex, integrating non-crossing constraints and sparse-group lasso regularization, while the proposed research utilizes a more straightforward Deep Quantile Regression model. Not only that, the objective of evaluation is also very different. 
 
-## Research Question or Hypotheses
+## Research Question and Hypotheses
 
-Research question: To what extent does Deep Quantile Regression outperform traditional regression models (Multivariate Linear, Multivariate Polynomial, Random Forest, and Support Vector Regression) in modeling the distribution of stock returns over the 30-day forecasting horizon?
+***Research Question:*** what extent Deep Quantile Regression outperforms traditional regression models (Multivariate Linear, Multivariate Polynomial, Random Forest, and Support Vector Regression) in modeling the distribution of stock returns over the 30-day forecasting horizon?
 
-- H1 Hypotheses: Deep Quantile Regression provides more accurate and informative predictions of stock return distributions than traditional regression models.
-- Null Hypotheses: Deep Quantile Regression does not perform significantly better than traditional regression models in predicting stock return distributions.
+- ***H1 Hypotheses:*** Deep Quantile Regression provides more accurate and informative predictions of stock return distributions than traditional regression models.
+- ***Null Hypotheses:*** Deep Quantile Regression does not perform significantly better than traditional regression models in predicting stock return distributions.
 
 ## Data Sources and Variables
 
-For this research, the primary data source is the historical daily stock price data for a selected group of publicly traded companies and will be obtained from Yahoo Finance. Yahoo Finance is selected to ensure consistent, reliable, and reproducible data collection. Since the platform maintains continuous historical data, the dataset contains the fundamental stock information with no missing or unknown data. The selected companies are the top 25 companies of the S&P 500 index, based on the market capitalization. This approach captures a diverse representation of different industries and company types.
+For this research, the primary data source is the historical daily stock price data for a selected group of publicly traded companies and will be obtained from Yahoo Finance. Yahoo Finance is selected to ensure consistent, reliable, and reproducible data collection. Since the platform maintains continuous historical data, the dataset contains the fundamental stock information with no missing or unknown data. The selected companies are the top 25 companies of the S&P 500 index, based on the market capitalization. This approach captures a diverse representation of different industries and company types. There are eight variables in the dataset and six of them are numeric. They are defined as below:
 
-Once the data was obtained, an exploratory data analysis was performed to assess data quality and gain data insights before the preprocessing and regression model approaches. As expected, the dataset has no missing/unknown data and contains 10 numerical columns. It has key variables that are needed for both Deep Quantile Regression and traditional regression models. The key variables are defined as below:
-
-- Date: the timeframe of the stock
-- Ticker: the stock symbol
-- Open: the opening price of the stock
-- High: the highest price of the stock during the period
-- Low: the lowest price of the stock during the period
-- Close: the closing price of the stock during the period
-- Adjusted Close: the adjusted closing price of the stock after corporate action during the period
-- Volume: the total number of shares traded during the period
-
-
-
-To facilitate model development and evaluation, the data set will be divided into two subsets. The first subset covers the period from March 2015 to March 2025, and it comprises of 61,489 observations. This subset will be used for the training and testing purposes, providing a robust size for Deep Quantile Regression and traditional regression model comparisons. The second subset covers the period from April 2025 to May 2025, and it comprises of 3,150 observations. This subset will be served as a validation period and will be compared to the predicted value in the same timeframe. 
+- ***Date:*** the timeframe of the stock
+- ***Ticker:*** the stock symbol
+- ***Open:*** the opening price of the stock
+- ***High:*** the highest price of the stock during the period
+- ***Low:*** the lowest price of the stock during the period
+- ***Close:*** the closing price of the stock during the period
+- ***Adjusted Close:*** the adjusted closing price of the stock after corporate action during the period
+- ***Volume:*** the total number of shares traded during the period
 
 ## Statistical Methods
 
 For statistical methodology, the approach will be a comparative analysis between traditional regression models and Deep Quantile Regression. Unlike traditional regression models where it output a single conditional mean prediction, Deep Quantile Regression applies the quantile loss or pinball function to directly estimate specific quantiles. Because of that, this allows the model to provide a better understanding of the full distribution of the target variable, which is useful in stock price prediction. By applying both traditional regression models and Deep Quantile Regression to the same dataset, this research examines and evaluates the strengths and limitations of each approach on stock price prediction.
-The dataset will be preprocessed for model development and evaluation. Multiple features will be engineered from the historical daily stock data to capture multiple financial factors that may influence future stock price movements. This will enable the models to be trained on various aspects of market complexity. The following features are defined as below:
 
-- Lagged Returns: the percentage change in the adjusted closing price of a stock from the prior day
-- Relative Strength Index: the momentum indicator that measure the rate and volatility of the stock’s price
-- Simple Moving Average: the average stock price over the specified timeframe
-- Moving Average Convergence Divergence: the momentum indicator that identify a difference between two moving average
+### Exploratory Data Analysis
 
-Since Deep Quantile Regression, Random Forest Regression, and Support Vector Regression are being compared in this research, all variables will be standardized using the z-score normalization to ensure equal feature contribution. From there, the dataset will be split into three subsets. 70% of the data will be used for model training, 15% for hyperparameter tuning, and the remaining 15% for the final performance evaluation. This will ensure that the assessment will be robust and unbiased on all models’ predictive performance.
+Once the data was successfully obtained, an exploratory data analysis was performed to assess data qualities and gain data insights before facilitating the model development and evaluation. The dataset is divided into two subsets. The first subset covers the period from March 2015 to March 2025, and it comprises of 61,489 observations. This subset is used for the training and testing purposes, providing a robust size for Deep Quantile Regression and traditional regression model comparisons. The
+second subset covers the period from April 2025 to May 2025, and it comprises of 3,150
+observations. This subset is served as a validation period and will be compared to the
+predicted value in the same timeframe.
 
-For the modeling approach, the predictive performance of Deep Quantile Regression will be evaluated and compared against traditional regression models. The input variable for all models will be the constructed features including the lagged return, trading volume, and the target variable will be the closing price for future time horizons of 30 days. For Deep Quantile Regression, the lagged return will be inputted into the feedforward neural network with 2 hidden layers, and the outcome will be the quantiles of the 30-days predicted closing prices. The same set of input feature will also be used and trained into the traditional regression models including Multivariate Linear Regression, Multivariate Polynomial Regression, Random Forest Regression, and Support Vector Regression. Each model will be trained independently, ensuring consistency. From there, it will display a direct comparison of each model’s learning ability on historical stock price and predictive capability on forecasting stock prices. 
+The descriptive statistic was applied on the numerical variables to understand their distributional properties. The results below show that the mean values are relatively high, which can be attributed to the presence of companies with large market capitalizations such as, Apple and Amazon, in the dataset. The statistics also reveal a wide range  across all variables. This indicates that there is a heteroscedasticity since the data appears to be highly volatile and non-stationary. This would impact the precision of traditional regression models, especially for multivariate linear and polynomial regression since the assumption of constant variance is violated.
 
-To assess and evaluate the predictive performance for all regression models, various metrics will be used. From there, it will provide a comprehensive evaluation of both point prediction accuracy and uncertainty estimation. The following metrics are defined below:
+![Descriptive Statistic](../Resources/Results/summary_plot_v2.png)
 
-- Root Mean Squared Error: the average of absolute difference between the predicted and actual value. It is used to measure how far the predicted values are from the observed actual values.
-- Mean Absolute Error: the square root of averaged squared error. It measures the average magnitude of the prediction errors from both underfitting and overfitting direction
-- Pinball Loss or Quantile Loss: the evaluation metric that is specifically designed for Deep Quantile Regression. It measures how well the predicted quantiles align with the actual outcomes
-- Prediction Interval Coverage Probability: the evaluation metric that measures the reliability of prediction intervals
+In addition, the mean is larger than the median for all variables, which indicates each distribution may be right-skewed and have a long tail on the high end. This interpretation is further supported by the standard deviation being larger compared to the mean, showing that the data is very spread out. The histogram below reinforces the analysis as it shows each distribution is indeed right-skewed.
+
+![Histogram](../Resources/Results/histogram_on_variable_v2.png){height=40%}
+
+### Pre-processing
+
+Due to the findings identified during the exploratory data analysis, the original variables were not suitable as features for both traditional and Deep Quantile Regression models. Because of that, the dataset was preprocessed for model development and evaluation. Multiple features were engineered to address problems such as the skewness observed in original variables. In addition, they also capture trend behaviors and predict short-term directional movement that may influence future stock prices. This enables the models to be trained on various aspects of market complexity. The following engineered features are defined as below:
+
+- ***Lagged Returns:*** the percentage change in the adjusted closing price of a stock from the prior day
+- ***1-Day Forward Returns:*** the percentage change in value from the previous day's closing price to the current day's closing price
+- ***5-Days Forward Returns:***  the percentage change in value from the closing price from 5 days ago to the current day's closing price
+- ***5-Days Rolling Standard Deviation:*** the measure of the stock's volatility over the past 5 days period
+- ***21-Days Rolling Standard Deviation:*** the measure of the stock's volatility over the past 21 days period
+- ***Relative Strength Index (RSI):*** the momentum indicator that measure the rate and volatility of the stock’s price
+- ***Simple Moving Average:*** the average closing price over the timeframe of 20 days
+- ***Moving Average Convergence Divergence (MACD):*** the momentum indicator that identifies a difference between two moving averages
+- ***Simple Moving Average Ratio:*** the ratio of the current price to the 20-day Simple Moving Average
+- ***Natural logarithm of Trading Volume*** the logarithm of trading volume
+
+Furthermore, all features were scaled to ensure that they contributed equally during model training. The dataset was then divided into three subsets: 70% for training, 15% for hyperparameter tuning, and the remaining 15% for final performance evaluation. This approach was to provide a robust and unbiased assessment for each models’ predictive performance.
+
+For the modeling approach, the predictive performance of Deep Quantile Regression was evaluated and compared against traditional regression models. All models used the engineered features as input variables, and the target variable was the adjusted closing price for future time horizons of 30 days. For Deep Quantile Regression, the input variables was fed into the feedforward neural network with 2 hidden layers. Each model was trained independently to ensure consistency and enables a direct comparison of each model’s learning ability on historical stock price and predictive capability on forecasting stock prices. 
+
+To assess and evaluate the predictive performance for all regression models, various metrics were used. This approach provided a comprehensive evaluation of both point prediction accuracy and uncertainty estimation. The following metrics are defined below:
+
+- ***Root Mean Squared Error:*** the average of absolute difference between the predicted and actual value. It is used to measure how far the predicted values are from the observed actual values.
+- ***Mean Absolute Error:*** the square root of averaged squared error. It measures the average magnitude of the prediction errors from both underfitting and overfitting direction
+- ***Pinball Loss or Quantile Loss:*** the evaluation metric that is specifically designed for Deep Quantile Regression. It measures how well the predicted quantiles align with the actual outcomes
+- ***Prediction Interval Coverage Probability:*** the evaluation metric that measures the reliability of prediction intervals
 
 ## Discussion of Results
 
 ## Conclusion
 
 
-## Reference
+## References
 
 - Abe, M., & Nakayama, H. (2018). Deep Learning for Forecasting Stock Returns in the Cross-Section. arXiv.Org.
 - Chronopoulos, I., Raftapostolos, A., & Kapetanios, G. (n.d.). Deep Quantile Regression. Retrieved October 12, 2025, from https://www.kcl.ac.uk/business/assets/pdf/dafm-working-papers/2021-papers/deep-quantile-regression.pdf

@@ -5,6 +5,11 @@ import numpy as np
 import pandas as pd
 import datetime
 import warnings
+import matplotlib.pyplot as plt
+import datetime as dt
+import plotly.express as px
+import matplotlib.dates as mdates
+from pandas.plotting import table
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 from statsmodels.tools.tools import add_constant
 
@@ -54,20 +59,33 @@ def vif_calculation(data):
 def main():
 
     # pull in data
-    history_data_url = 'https://raw.githubusercontent.com/eddiexunyc/capstone_work_project/refs/heads/main/Resources/historical_stock_data.csv'
+    history_data_url = 'https://raw.githubusercontent.com/eddiexunyc/capstone_work_project/refs/heads/main/Resources/Data/historical_stock_data.csv'
     history_data = pd.read_csv(history_data_url)
 
     # perform the pre-processing
     pre_process_data = stock_preprocessing(history_data)
-    pre_process_file_name = 'Resources/pre_process_data_v2.csv'
+    pre_process_file_name = 'Resources/Data/pre_process_data_final.csv'
 
     # calculate the VIF
     vif_result = vif_calculation(pre_process_data)
-    vif_result_data_file_name = 'Resources/vif_result_data.csv'
+    vif_result_data_file_name = 'Resources/Results/vif_result_data.csv'
+
+    # create a subplot without frame for the VIF result
+    plt.figure(figsize=(10, 6))
+    plot = plt.subplot(111, frame_on=False)
+
+    # remove axis
+    plot.xaxis.set_visible(False) 
+    plot.yaxis.set_visible(False) 
+
+    # create the table plot and position it in the upper left corner
+    table(plot, vif_result,loc='upper right')
+
+    # save the plot as a png file
+    plt.savefig('Resources/Results/vif_result_plot.png')
 
     # save to CSV
     pre_process_data.to_csv(pre_process_file_name, index = False)
-    vif_result.to_csv(vif_result_data_file_name,index = False)
 
 if __name__=="__main__":
     main()
