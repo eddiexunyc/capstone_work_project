@@ -17,14 +17,24 @@ from statsmodels.tools.tools import add_constant
 def stock_preprocessing(data):
 
     # group by company ticker before pre-processing
-    grouped_data = data.groupby('Ticker')
+    # grouped_data = data.groupby('Ticker')
 
     # calculate the lagged return
-    data['Lagged_Returns'] = grouped_data['Adj Close'].transform(lambda x: x.pct_change().shift(1) * 100)
+    data['Lagged_Returns'] = data.groupby('Ticker')['Adj Close'].shift(1).pct_change(fill_method = None) 
+
+    # calculate the 1-days forward return
+    data['Return_1d'] = data.groupby('Ticker')['Adj Close'].pct_change()
+
+    # calculate the 5-days forward return
+    data['Return_5d'] = data.groupby('Ticker')['Adj Close'].pct_change(5)
+
+    # calculate the 5 and 21 Days rolling standard deviation
+    data['Volatility_5d'] = data.groupby('Ticker')['Return_1d'].rolling(5).std().reset_index(level=0, drop=True)
+    data['Volatility_21d'] = data.groupby('Ticker')['Return_1d'].rolling(21).std().reset_index(level=0, drop=True)
 
     # calculate the relative strength index (RSI) of past 14 periods with EMA smoothing to provide weighted average.
     rsi_window = 14
-    delta = grouped_data['Adj Close'].transform(lambda x: x.diff())
+    delta = data.groupby('Ticker')['Adj Close'].transform(lambda x: x.diff())
     gain = delta.where(delta > 0, 0)
     loss = -delta.where(delta < 0, 0)
     avg_gain = gain.groupby(data['Ticker']).transform(lambda x: x.ewm(alpha=1/rsi_window, min_periods=rsi_window).mean())
@@ -34,27 +44,25 @@ def stock_preprocessing(data):
 
     # calculate the simple moving average (SMA)
     sma_window = 20
-    sma_window = 20
-    data['SMA_20'] = grouped_data['Adj Close'].transform(lambda x: x.rolling(window=sma_window).mean())
+    data['SMA_20'] = data.groupby('Ticker')['Adj Close'].transform(lambda x: x.rolling(window=sma_window).mean())
 
     # calculate the moving average convergence divergence
-    ema12 = grouped_data['Adj Close'].transform(lambda x: x.ewm(span=12, adjust=False).mean())
-    ema26 = grouped_data['Adj Close'].transform(lambda x: x.ewm(span=26, adjust=False).mean())
+    ema12 = data.groupby('Ticker')['Adj Close'].transform(lambda x: x.ewm(span=12, adjust=False).mean())
+    ema26 = data.groupby('Ticker')['Adj Close'].transform(lambda x: x.ewm(span=26, adjust=False).mean())
     data['MACD'] = ema12 - ema26
 
+    # calculate the simple moving average ratio
+    data['SMA20_Ratio'] = data['Adj Close']/data['SMA_20']
+
+    # calculate the log of trading volume
+    data['log_Volume'] = np.log1p(data['Volume'])
+
     # fill missing data using forward and backward fill methods
-    fill_cols = ['Lagged_Returns', 'RSI', 'SMA_20', 'MACD']
+    fill_cols = ['Lagged_Returns', 'Return_1d', 'Return_5d', 'Volatility_5d', 'Volatility_21d',
+                'RSI', 'SMA_20', 'MACD', 'SMA20_Ratio']
     data[fill_cols] = data.groupby('Ticker')[fill_cols].transform(lambda x: x.bfill().ffill())
 
     return data
-
-def vif_calculation(data):
-    feature_data = data[['Lagged_Returns', 'RSI', 'SMA_20', 'MACD']]
-    vif_data = pd.DataFrame()
-    vif_data['feature'] = feature_data.columns
-    vif_data['VIF'] = [variance_inflation_factor(feature_data.values, i) for i in range(feature_data.shape[1])]
-
-    return vif_data
 
 def main():
 
@@ -64,11 +72,7 @@ def main():
 
     # perform the pre-processing
     pre_process_data = stock_preprocessing(history_data)
-    pre_process_file_name = 'Resources/Data/pre_process_data_final.csv'
-
-    # calculate the VIF
-    vif_result = vif_calculation(pre_process_data)
-    vif_result_data_file_name = 'Resources/Results/vif_result_data.csv'
+    pre_process_file_name = 'Resources/Data/pre_process_data_final_revised.csv'
 
     # create a subplot without frame for the VIF result
     plt.figure(figsize=(10, 6))
@@ -77,12 +81,6 @@ def main():
     # remove axis
     plot.xaxis.set_visible(False) 
     plot.yaxis.set_visible(False) 
-
-    # create the table plot and position it in the upper left corner
-    table(plot, vif_result,loc='upper right')
-
-    # save the plot as a png file
-    plt.savefig('Resources/Results/vif_result_plot.png')
 
     # save to CSV
     pre_process_data.to_csv(pre_process_file_name, index = False)
