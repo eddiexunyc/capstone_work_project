@@ -23,6 +23,12 @@ from sklearn.svm import SVR
 features = ['Lagged_Returns', 'Return_1d', 'Return_5d', 'Volatility_5d', 'Volatility_21d',
                 'RSI', 'SMA_20', 'MACD', 'SMA20_Ratio', 'log_Volume']
 
+# define a diviation function to address the inf/nan issues for poly
+def safe_div(a, b, fallback=0):
+        if b is None or b == 0 or np.isnan(b) or np.isinf(b):
+            return fallback
+        return a / b
+
 # define a function that update the indicators so the indicators won't be constant and allow for an accurate prediction
 def recursive_forecast(data, model, features, scaler=None, transformer=None):
 
@@ -39,11 +45,20 @@ def recursive_forecast(data, model, features, scaler=None, transformer=None):
             last_row = df.iloc[-1].copy()
 
             # predict the future price
-            x_input = last_row[features].values.reshape(1, -1)
+            x_input = np.array([[last_row[f] for f in features]])
+
+            x_input = np.clip(x_input, -10, 10)
+            x_input = np.nan_to_num(x_input, nan=0.0, posinf=0.0, neginf=0.0)
+
+            # apply transformer
             if transformer:
                 x_input = transformer.transform(x_input)
+                x_input = np.nan_to_num(x_input, nan=0.0, posinf=0.0, neginf=0.0)
+
+            # apply scaler
             if scaler:
                 x_input = scaler.transform(x_input)
+                x_input = np.nan_to_num(x_input, nan=0.0, posinf=0.0, neginf=0.0)
 
             predicted_price = model.predict(x_input)[0]
 
@@ -57,14 +72,14 @@ def recursive_forecast(data, model, features, scaler=None, transformer=None):
 
             # update lagged return
             prev_price = last_row['Adj Close']
-            new['Lagged_Returns'] = (predicted_price - prev_price) / prev_price
+            new['Lagged_Returns'] = safe_div(predicted_price - prev_price, prev_price)
 
             # update the 1-day forward return
             new['Return_1d'] = new['Lagged_Returns']
 
             # update the 5-days forward return
             if len(prices) >= 6:
-                new['Return_5d'] = (prices[-1] - prices[-6]) / prices[-6]
+                new['Return_5d'] = safe_div(prices[-1] - prices[-6], prices[-6])
             else:
                 new['Return_5d'] = last_row['Return_5d']
 
@@ -81,9 +96,11 @@ def recursive_forecast(data, model, features, scaler=None, transformer=None):
                 new['Volatility_21d'] = last_row['Volatility_21d']
 
             # update SMA20
-            prices = list(df['Adj Close']) + [predicted_price]
-            new['SMA_20'] = np.mean(prices[-20:])
-
+            if len(prices) >= 20:
+                new['SMA_20'] = np.mean(prices[-20:])
+            else:
+                new['SMA_20'] = last_row['SMA_20']
+            
             # update RSI
             if len(prices) >= 15:
                 deltas = np.diff(prices[-15:])
@@ -95,18 +112,20 @@ def recursive_forecast(data, model, features, scaler=None, transformer=None):
                 new['RSI'] = last_row["RSI"]
 
             # update MACD
-            ema12 = pd.Series(prices).ewm(span=12).mean().iloc[-1]
-            ema26 = pd.Series(prices).ewm(span=26).mean().iloc[-1]
+            ema12 = pd.Series(prices).ewm(span=12, adjust=False).mean().iloc[-1]
+            ema26 = pd.Series(prices).ewm(span=26, adjust=False).mean().iloc[-1]
             new['MACD'] = ema12 - ema26
 
             # update the SMA20 Ratio
-            if new['SMA_20'] != 0:
-                new['SMA20_Ratio'] = predicted_price / new['SMA_20']
-            else:
-                new['SMA20_Ratio'] = last_row['SMA20_Ratio']
+            new['SMA20_Ratio'] = safe_div(predicted_price, new['SMA_20'], fallback=1)
 
-            # Log Volume – forward unknown → hold previous or model separately
+            # update log volume
             new['log_Volume'] = last_row['log_Volume']
+
+            # define the final safety
+            for col in features:
+                if not np.isfinite(new[col]):
+                    new[col] = 0
 
             # append predicted row
             df = pd.concat([df, new.to_frame().T], ignore_index=True)
@@ -137,13 +156,19 @@ def stock_price_linear_reg(data):
     x_val, x_test, y_val, y_test, ticker_val, ticker_test, date_val, date_test = train_test_split(
         x_temp, y_temp, ticker_temp, date_temp, test_size=0.5, random_state=42)
 
+    # deploy the scalar
+    scaler = StandardScaler()
+    x_train_scaled = scaler.fit_transform(x_train)
+    x_val_scaled = scaler.transform(x_val)
+    x_test_scaled = scaler.transform(x_test)
+
     # deploy linear regression
     lm = LinearRegression()
-    lm.fit(x_train,y_train)
+    lm.fit(x_train_scaled, y_train)
 
     # calculate predictions on validation and test sets
-    valid_prediction = lm.predict(x_val)
-    test_prediction = lm.predict(x_test)
+    valid_prediction = lm.predict(x_val_scaled)
+    test_prediction = lm.predict(x_test_scaled)
 
     # calculate mean squared error on test set
     mse = mean_squared_error(y_test, test_prediction)
@@ -164,12 +189,16 @@ def stock_price_linear_reg(data):
         'Mean Absolute Error': mae}])
     
     # provide the future predicted value
-    lm_prediction = recursive_forecast(data, lm, features)
+    print('Working on Multivariate Linear Regression Prediction')
+
+    lm_prediction = recursive_forecast(data, lm, features, scaler=scaler)
     lm_prediction = lm_prediction.sort_values(['Ticker', 'Date']).reset_index(drop=True)
 
     # save predictions to CSV
     lm_file_name = 'Resources/Predictions/lm_prediction_revised.csv'
     lm_prediction.to_csv(lm_file_name, index=False)
+    
+    print('Multivariate Linear Regression Prediction is completed')
 
     return result_lm
 
@@ -195,17 +224,23 @@ def stock_price_poly_reg(data):
     poly_feature = PolynomialFeatures(degree=2)
 
     # train the data
-    x_train_quad = poly_feature.fit_transform(x_train)
-    x_valid_quad = poly_feature.transform(x_val)
-    x_test_quad = poly_feature.transform(x_test)
+    x_train_poly = poly_feature.fit_transform(x_train)
+    x_val_poly   = poly_feature.transform(x_val)
+    x_test_poly  = poly_feature.transform(x_test)
+
+    # define the scalar
+    scaler = StandardScaler()
+    x_train_scaled = scaler.fit_transform(x_train_poly)
+    x_val_scaled = scaler.transform(x_val_poly)
+    x_test_scaled = scaler.transform(x_test_poly)
 
     # deploy polynomial regression
     poly_lm = LinearRegression()
-    poly_lm.fit(x_train_quad, y_train)
+    poly_lm.fit(x_train_scaled, y_train)
 
     # calculate predictions on validation and test sets
-    valid_prediction = poly_lm.predict(x_valid_quad)
-    test_prediction = poly_lm.predict(x_test_quad)
+    valid_prediction = poly_lm.predict(x_val_scaled)
+    test_prediction = poly_lm.predict(x_test_scaled)
 
     # calculate mean squared error on test set
     mse = mean_squared_error(y_test, test_prediction)
@@ -223,13 +258,17 @@ def stock_price_poly_reg(data):
         'Mean Absolute Error': mae}])
     
     # provide the future predicted value
-    poly_prediction = recursive_forecast(data, poly_lm, features, transformer=poly_feature)
+    print('Working on Multivariate Polynomial Regression Prediction')
+
+    poly_prediction = recursive_forecast(data, poly_lm, features, scaler=scaler, transformer=poly_feature)
     poly_prediction = poly_prediction.sort_values(['Ticker', 'Date']).reset_index(drop=True)
 
     # save predictions to CSV
     poly_file_name = 'Resources/Predictions/poly_prediction_revised.csv'
     poly_prediction.to_csv(poly_file_name, index=False)
     
+    print('Multivariate Polynomial Regression Prediction is completed')
+
     return result_poly
 
 # create random forest regression function
@@ -283,12 +322,16 @@ def stock_price_rf_reg(data):
         'Mean Absolute Error': mae}])
     
     # provide the predicted value
+    print('Working on Random Forest Regression Prediction')
+
     rf_prediction = recursive_forecast(data, rf100, features, scaler=scaler)
     rf_prediction = rf_prediction.sort_values(['Ticker', 'Date']).reset_index(drop=True)
     
     # save predictions to CSV
     rf_file_name = 'Resources/Predictions/rf_prediction_revised.csv'
     rf_prediction.to_csv(rf_file_name, index=False)
+
+    print('Random Forest Regression is completed')
 
     return result_rf
 
@@ -344,12 +387,16 @@ def stock_price_svr_reg(data):
         'Mean Absolute Error': mae}])
     
     # provide the predicted values
+    print('Working on Support Vector Regression Prediction')
+
     svr_prediction = recursive_forecast(data, svr, features, scaler=scaler)
     svr_prediction = svr_prediction.sort_values(['Ticker', 'Date']).reset_index(drop=True)
 
     # save predictions to CSV
     svr_file_name = 'Resources/Predictions/svr_prediction_revised.csv'
     svr_prediction.to_csv(svr_file_name, index=False)
+
+    print('Support Vector Regression is completed')
 
     return result_svr
 

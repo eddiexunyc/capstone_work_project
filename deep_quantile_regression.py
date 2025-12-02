@@ -9,11 +9,19 @@ import tensorflow as tf
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
+# define the recursive forecasting for deep quantile regression
 
+
+# define the deep quantile regression
 def deep_quantile_regression(data):
 
+    # define features and quantiles
+    features = ['Lagged_Returns', 'Return_1d', 'Return_5d', 'Volatility_5d', 'Volatility_21d',
+                'RSI', 'SMA_20', 'MACD', 'SMA20_Ratio', 'log_Volume']
+
+    num_q = len(quantiles)
+
     # define x and y variables
-    features = ['Open', 'High', 'Low', 'Close', 'Volume', 'Lagged_Returns', 'RSI', 'SMA_20', 'MACD']
     x = data[features].values
     y = data['Adj Close'].values
 
@@ -127,7 +135,7 @@ def deep_quantile_regression(data):
     dqr_prediction = dqr_prediction.sort_values(['Ticker', 'Date']).reset_index(drop=True)
 
     # save predictions to CSV
-    dqr_file_name = 'Resources/Predictions/dqr_prediction.csv'
+    dqr_file_name = 'Resources/Predictions/dqr_prediction_revised.csv'
     dqr_prediction.to_csv(dqr_file_name, index=False)
     
     return prediction_result, scaler, dqr_prediction
