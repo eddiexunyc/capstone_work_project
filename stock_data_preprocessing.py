@@ -73,7 +73,7 @@ def stock_preprocessing(data):
 def main():
 
     # pull in data
-    history_data_url = 'https://raw.githubusercontent.com/eddiexunyc/capstone_work_project/refs/heads/main/Resources/Data/historical_stock_data.csv'
+    history_data_url = 'https://raw.githubusercontent.com/eddiexunyc/capstone_work_project/refs/heads/main/Resources/Data/historical_stock_data_revised.csv'
     history_data = pd.read_csv(history_data_url)
 
     # perform the pre-processing
