@@ -80,14 +80,6 @@ def main():
     pre_process_data = stock_preprocessing(history_data)
     pre_process_file_name = 'Resources/Data/pre_process_data_final_revised.csv'
 
-    # create a subplot without frame for the VIF result
-    plt.figure(figsize=(10, 6))
-    plot = plt.subplot(111, frame_on=False)
-
-    # remove axis
-    plot.xaxis.set_visible(False) 
-    plot.yaxis.set_visible(False) 
-
     # save to CSV
     pre_process_data.to_csv(pre_process_file_name, index = False)
 
