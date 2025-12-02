@@ -16,13 +16,10 @@ from statsmodels.tools.tools import add_constant
 
 def stock_preprocessing(data):
 
-    # group by company ticker before pre-processing
-    # grouped_data = data.groupby('Ticker')
-
     # calculate the lagged return
     data['Lagged_Returns'] = data.groupby('Ticker')['Adj Close'].shift(1).pct_change(fill_method = None) 
 
-    # calculate the 1-days forward return
+    # calculate the 1-day forward return
     data['Return_1d'] = data.groupby('Ticker')['Adj Close'].pct_change()
 
     # calculate the 5-days forward return
@@ -40,7 +37,12 @@ def stock_preprocessing(data):
     avg_gain = gain.groupby(data['Ticker']).transform(lambda x: x.ewm(alpha=1/rsi_window, min_periods=rsi_window).mean())
     avg_loss = loss.groupby(data['Ticker']).transform(lambda x: x.ewm(alpha=1/rsi_window, min_periods=rsi_window).mean())
     rs = avg_gain / avg_loss
+    rs = avg_gain / avg_loss
+    rs = rs.replace([np.inf, -np.inf], np.nan)
     data['RSI'] = 100 - (100 / (1 + rs))
+
+    # fill out nan values for RSI edge cases
+    data['RSI'] = data['RSI'].fillna(50)
 
     # calculate the simple moving average (SMA)
     sma_window = 20
@@ -52,15 +54,19 @@ def stock_preprocessing(data):
     data['MACD'] = ema12 - ema26
 
     # calculate the simple moving average ratio
-    data['SMA20_Ratio'] = data['Adj Close']/data['SMA_20']
+    data['SMA20_Ratio'] = data['Adj Close'] / data['SMA_20']
+    data['SMA20_Ratio'] = data['SMA20_Ratio'].replace([np.inf, -np.inf], np.nan)
 
     # calculate the log of trading volume
     data['log_Volume'] = np.log1p(data['Volume'])
 
-    # fill missing data using forward and backward fill methods
+    # fill missing data using forward and backward fill methods and 
     fill_cols = ['Lagged_Returns', 'Return_1d', 'Return_5d', 'Volatility_5d', 'Volatility_21d',
                 'RSI', 'SMA_20', 'MACD', 'SMA20_Ratio']
     data[fill_cols] = data.groupby('Ticker')[fill_cols].transform(lambda x: x.bfill().ffill())
+
+    data = data.replace([np.inf, -np.inf], np.nan)
+    data = data.fillna(0)
 
     return data
 

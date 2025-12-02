@@ -16,11 +16,12 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error
 
-# load upport vector regression packages
+# load support vector regression packages
 from sklearn.svm import SVR
 
-# define features that will be used on all regression models
-features = ['Open', 'High', 'Low', 'Close', 'Volume', 'Lagged_Returns', 'RSI', 'SMA_20', 'MACD']
+# define engineered features that will be used on all regression models
+features = ['Lagged_Returns', 'Return_1d', 'Return_5d', 'Volatility_5d', 'Volatility_21d',
+                'RSI', 'SMA_20', 'MACD', 'SMA20_Ratio', 'log_Volume']
 
 # define a function that update the indicators so the indicators won't be constant and allow for an accurate prediction
 def recursive_forecast(data, model, features, scaler=None, transformer=None):
@@ -48,18 +49,40 @@ def recursive_forecast(data, model, features, scaler=None, transformer=None):
 
             # build the future row
             new = last_row.copy()
-            new["Date"] = fdate
-            new["Adj Close"] = predicted_price
+            new['Date'] = fdate
+            new['Adj Close'] = predicted_price
 
-            # update the technical indicator recursively to provide constant predicted value
+            # update the adjusted closed price
+            prices = list(df["Adj Close"]) + [predicted_price]
 
-            # upate lagged return
-            prev_price = last_row["Adj Close"]
-            new["Lagged_Returns"] = (predicted_price - prev_price) / prev_price
+            # update lagged return
+            prev_price = last_row['Adj Close']
+            new['Lagged_Returns'] = (predicted_price - prev_price) / prev_price
+
+            # update the 1-day forward return
+            new['Return_1d'] = new['Lagged_Returns']
+
+            # update the 5-days forward return
+            if len(prices) >= 6:
+                new['Return_5d'] = (prices[-1] - prices[-6]) / prices[-6]
+            else:
+                new['Return_5d'] = last_row['Return_5d']
+
+            # update the 5-day volatility
+            if len(prices) >= 6:
+                new['Volatility_5d'] = np.std(np.diff(prices[-6:]))
+            else:
+                new['Volatility_5d'] = last_row['Volatility_5d']
+
+            # update the 21-day volatility
+            if len(prices) >= 22:
+                new['Volatility_21d'] = np.std(np.diff(prices[-22:]))
+            else:
+                new['Volatility_21d'] = last_row['Volatility_21d']
 
             # update SMA20
-            prices = list(df["Adj Close"]) + [predicted_price]
-            new["SMA_20"] = np.mean(prices[-20:])
+            prices = list(df['Adj Close']) + [predicted_price]
+            new['SMA_20'] = np.mean(prices[-20:])
 
             # update RSI
             if len(prices) >= 15:
@@ -67,14 +90,23 @@ def recursive_forecast(data, model, features, scaler=None, transformer=None):
                 ups = deltas[deltas > 0].sum()
                 downs = -deltas[deltas < 0].sum()
                 rs = ups / downs if downs != 0 else 0
-                new["RSI"] = 100 - (100 / (1 + rs))
+                new['RSI'] = 100 - (100 / (1 + rs))
             else:
-                new["RSI"] = last_row["RSI"]
+                new['RSI'] = last_row["RSI"]
 
             # update MACD
             ema12 = pd.Series(prices).ewm(span=12).mean().iloc[-1]
             ema26 = pd.Series(prices).ewm(span=26).mean().iloc[-1]
-            new["MACD"] = ema12 - ema26
+            new['MACD'] = ema12 - ema26
+
+            # update the SMA20 Ratio
+            if new['SMA_20'] != 0:
+                new['SMA20_Ratio'] = predicted_price / new['SMA_20']
+            else:
+                new['SMA20_Ratio'] = last_row['SMA20_Ratio']
+
+            # Log Volume – forward unknown → hold previous or model separately
+            new['log_Volume'] = last_row['log_Volume']
 
             # append predicted row
             df = pd.concat([df, new.to_frame().T], ignore_index=True)
@@ -136,7 +168,7 @@ def stock_price_linear_reg(data):
     lm_prediction = lm_prediction.sort_values(['Ticker', 'Date']).reset_index(drop=True)
 
     # save predictions to CSV
-    lm_file_name = 'Resources/Predictions/lm_prediction.csv'
+    lm_file_name = 'Resources/Predictions/lm_prediction_revised.csv'
     lm_prediction.to_csv(lm_file_name, index=False)
 
     return result_lm
@@ -195,7 +227,7 @@ def stock_price_poly_reg(data):
     poly_prediction = poly_prediction.sort_values(['Ticker', 'Date']).reset_index(drop=True)
 
     # save predictions to CSV
-    poly_file_name = 'Resources/Predictions/poly_prediction.csv'
+    poly_file_name = 'Resources/Predictions/poly_prediction_revised.csv'
     poly_prediction.to_csv(poly_file_name, index=False)
     
     return result_poly
@@ -255,7 +287,7 @@ def stock_price_rf_reg(data):
     rf_prediction = rf_prediction.sort_values(['Ticker', 'Date']).reset_index(drop=True)
     
     # save predictions to CSV
-    rf_file_name = 'Resources/Predictions/rf_prediction.csv'
+    rf_file_name = 'Resources/Predictions/rf_prediction_revised.csv'
     rf_prediction.to_csv(rf_file_name, index=False)
 
     return result_rf
@@ -265,7 +297,6 @@ def stock_price_rf_reg(data):
 def stock_price_svr_reg(data):
     
     # define x and y variables
-    features = ['Open', 'High', 'Low', 'Close', 'Volume', 'Lagged_Returns', 'RSI', 'SMA_20', 'MACD']
     x = data[features].values
     y = data['Adj Close'].values
 
@@ -317,7 +348,7 @@ def stock_price_svr_reg(data):
     svr_prediction = svr_prediction.sort_values(['Ticker', 'Date']).reset_index(drop=True)
 
     # save predictions to CSV
-    svr_file_name = 'Resources/Predictions/svr_prediction.csv'
+    svr_file_name = 'Resources/Predictions/svr_prediction_revised.csv'
     svr_prediction.to_csv(svr_file_name, index=False)
 
     return result_svr
@@ -325,7 +356,7 @@ def stock_price_svr_reg(data):
 def main():
 
     # read in data
-    pre_process_url = 'https://raw.githubusercontent.com/eddiexunyc/capstone_work_project/refs/heads/main/Resources/Data/pre_process_data_v2.csv'
+    pre_process_url = 'https://raw.githubusercontent.com/eddiexunyc/capstone_work_project/refs/heads/main/Resources/Data/pre_process_data_final_revised.csv'
     pre_process_data = pd.read_csv(pre_process_url)
 
     # run the mulitvariate linear regression
@@ -348,7 +379,7 @@ def main():
         pd.DataFrame(svr_result,columns=['Model', 'Root Mean Squared Error', 'Mean Absolute Error'])])
     
     summary = summary.sort_values(by="Model", ascending=False).reset_index(drop=True)
-    summary.to_csv('Resources/Predictions/summary_metric.csv', index=False)
+    summary.to_csv('Resources/Predictions/summary_metric_revised.csv', index=False)
     print(summary)
     
 if __name__=="__main__":
