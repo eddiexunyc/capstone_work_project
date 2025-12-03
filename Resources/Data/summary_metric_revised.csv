@@ -1,0 +1,4 @@
+Model,Root Mean Squared Error,Mean Absolute Error
+Random Forest Regression,1.3359656291030597,0.34865339821418173
+Multivariate Polynomial Regression with Ridge Regularization,0.8068523179706838,0.41005540999556667
+Multivariate Linear Regression with Ridge Regularization,4.6197687184226615,2.441011046421716

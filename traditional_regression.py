@@ -6,18 +6,16 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
-# load linear and polynomial regression packages
+# load linear and polynomial regression packages including the ridge regularization
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.metrics import mean_absolute_error, r2_score, mean_squared_error
+from sklearn.linear_model import Ridge
 
 # load random forest regression packages
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error
-
-# load support vector regression packages
-from sklearn.svm import SVR
 
 # define engineered features that will be used on all regression models
 features = ['Lagged_Returns', 'Return_1d', 'Return_5d', 'Volatility_5d', 'Volatility_21d',
@@ -32,7 +30,7 @@ def safe_div(a, b, fallback=0):
 # define a function that update the indicators so the indicators won't be constant and allow for an accurate prediction
 def recursive_forecast(data, model, features, scaler=None, transformer=None):
 
-    forecast_dates = pd.date_range('2025-04-01', '2025-04-30', freq='B')
+    forecast_dates = pd.date_range('2025-05-01', '2025-05-31', freq='B')
     all_predictions = []
 
     for ticker in data['Ticker'].unique():
@@ -162,8 +160,8 @@ def stock_price_linear_reg(data):
     x_val_scaled = scaler.transform(x_val)
     x_test_scaled = scaler.transform(x_test)
 
-    # deploy linear regression
-    lm = LinearRegression()
+    # deploy linear regression with ridge regularization
+    lm = Ridge(alpha=1.0)   
     lm.fit(x_train_scaled, y_train)
 
     # calculate predictions on validation and test sets
@@ -184,7 +182,7 @@ def stock_price_linear_reg(data):
 
     # create dataframe for linear regression metric
     result_lm = pd.DataFrame([{
-        'Model': 'Multivariate Linear Regression',
+        'Model': 'Multivariate Linear Regression with Ridge Regularization',
         'Root Mean Squared Error': rmse,
         'Mean Absolute Error': mae}])
     
@@ -234,8 +232,8 @@ def stock_price_poly_reg(data):
     x_val_scaled = scaler.transform(x_val_poly)
     x_test_scaled = scaler.transform(x_test_poly)
 
-    # deploy polynomial regression
-    poly_lm = LinearRegression()
+    # deploy polynomial regression with ridge regularization
+    poly_lm = Ridge(alpha=10.0)
     poly_lm.fit(x_train_scaled, y_train)
 
     # calculate predictions on validation and test sets
@@ -253,7 +251,7 @@ def stock_price_poly_reg(data):
 
     # create a dataframe for polynonimal regression metric
     result_poly = pd.DataFrame([{
-        'Model': 'Multivariate Polynomial Regression',
+        'Model': 'Multivariate Polynomial Regression with Ridge Regularization',
         'Root Mean Squared Error': rmse,
         'Mean Absolute Error': mae}])
     
@@ -335,71 +333,6 @@ def stock_price_rf_reg(data):
 
     return result_rf
 
-
-# create support vector regression function
-def stock_price_svr_reg(data):
-    
-    # define x and y variables
-    x = data[features].values
-    y = data['Adj Close'].values
-
-    ticker_labels = data['Ticker'].values
-    dates = data['Date'].values if 'Date' in data.columns else np.arange(len(data))
-
-    # split train data into 70% for training and 30% for tuning and performance
-    x_train, x_temp, y_train, y_temp, ticker_train, ticker_temp, date_train, date_temp = train_test_split(
-        x, y, ticker_labels, dates, test_size=0.3, random_state=42)
-
-    # split the 30% for tuning and performance into 15% validation and 15% test
-    x_val, x_test, y_val, y_test, ticker_val, ticker_test, date_val, date_test = train_test_split(
-        x_temp, y_temp, ticker_temp, date_temp, test_size=0.5, random_state=42)
-
-    # normalize the data
-    scaler = StandardScaler()
-    x_train_scaled = scaler.fit_transform(x_train)
-    x_test_scaled = scaler.transform(x_test)
-    x_val_scaled = scaler.transform(x_val)
-
-    # define the support vector regression with RBF kernel
-    svr = SVR(kernel='rbf', C=1e3, gamma=0.1)
-    svr.fit(x_train_scaled, y_train)
-
-    # calculate predictions on validation and test sets
-    valid_prediction = svr.predict(x_val_scaled)
-    test_prediction = svr.predict(x_test_scaled)
-
-    # calculate mean squared error on test set
-    mse = mean_squared_error(y_test, test_prediction)
-
-    # calculate root mean squared error on test set
-    rmse = np.sqrt(mse)
-    
-    # calculate r-squared on test set
-    r2 = r2_score(y_test, test_prediction)
-
-    # calculate mean absolute error on test set
-    mae = mean_absolute_error(y_test, test_prediction) 
-
-    # create a dataframe for support vector regression metric
-    result_svr = pd.DataFrame([{
-        'Model': 'Support Vector Regression',
-        'Root Mean Squared Error': rmse,
-        'Mean Absolute Error': mae}])
-    
-    # provide the predicted values
-    print('Working on Support Vector Regression Prediction')
-
-    svr_prediction = recursive_forecast(data, svr, features, scaler=scaler)
-    svr_prediction = svr_prediction.sort_values(['Ticker', 'Date']).reset_index(drop=True)
-
-    # save predictions to CSV
-    svr_file_name = 'Resources/Predictions/svr_prediction_revised.csv'
-    svr_prediction.to_csv(svr_file_name, index=False)
-
-    print('Support Vector Regression is completed')
-
-    return result_svr
-
 def main():
 
     # read in data
@@ -415,18 +348,15 @@ def main():
     # run the random forest regression
     rf_result = stock_price_rf_reg(pre_process_data)
 
-    # run the support vector regression
-    svr_result = stock_price_svr_reg(pre_process_data)
-
     # combine the evaluation metrics from all regressions
     summary = pd.concat([
         pd.DataFrame(lm_result, columns=['Model', 'Root Mean Squared Error', 'Mean Absolute Error']),
         pd.DataFrame(poly_result, columns=['Model', 'Root Mean Squared Error', 'Mean Absolute Error']),
-        pd.DataFrame(rf_result, columns=['Model', 'Root Mean Squared Error', 'Mean Absolute Error']),
-        pd.DataFrame(svr_result,columns=['Model', 'Root Mean Squared Error', 'Mean Absolute Error'])])
+        pd.DataFrame(rf_result, columns=['Model', 'Root Mean Squared Error', 'Mean Absolute Error'])])
     
     summary = summary.sort_values(by="Model", ascending=False).reset_index(drop=True)
-    summary.to_csv('Resources/Predictions/summary_metric_revised.csv', index=False)
+    summary.to_csv('Resources/Data/summary_metric_revised.csv', index=False)
+    
     print(summary)
     
 if __name__=="__main__":

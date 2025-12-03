@@ -10,7 +10,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
 # define the recursive forecasting for deep quantile regression
-
+def recursive_forcasting():
+    something = ''
 
 # define the deep quantile regression
 def deep_quantile_regression(data):

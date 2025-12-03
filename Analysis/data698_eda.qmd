@@ -11,15 +11,15 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import datetime as dt
+import seaborn as sns
 import plotly.express as px
 import matplotlib.dates as mdates
 from pandas.plotting import table
 ```
 
 ```{python}
-history_data_url = 'https://raw.githubusercontent.com/eddiexunyc/capstone_work_project/refs/heads/main/Resources/Data/historical_stock_data.csv'
+history_data_url = 'https://raw.githubusercontent.com/eddiexunyc/capstone_work_project/refs/heads/main/Resources/Data/historical_stock_data_revised.csv'
 history_data = pd.read_csv(history_data_url)
-history_data.describe()
 ```
 
 ```{python}
@@ -32,7 +32,7 @@ print(history_data)
 summary_table = history_data.describe()
 
 # create a subplot without frame
-plt.figure(figsize=(8, 6))
+plt.figure(figsize=(6, 5))
 plot = plt.subplot(111, frame_on=False)
 
 # remove axis
@@ -43,7 +43,7 @@ plot.yaxis.set_visible(False)
 table(plot, summary_table,loc='center')
 
 # save the plot as a png file
-plt.savefig('../Resources/Results/summary_plot.png', dpi = 300)
+plt.savefig('../Resources/Results/summary_plot_v3.png', dpi = 300)
 ```
 
 ```{python}
@@ -65,7 +65,7 @@ num_cols = history_data.select_dtypes(include=np.number).columns.tolist()
 history_data[num_cols].hist(bins=20, figsize=(12, 8), color='skyblue')
 plt.suptitle("Histograms of Numerical Variables")
 plt.tight_layout()
-plt.savefig('../Resources/Results/histogram_on_variable.png', dpi = 300)
+plt.savefig('../Resources/Results/histogram_on_variable_v3.png', dpi = 300)
 plt.show()
 ```
 
@@ -80,4 +80,54 @@ sns.heatmap(stock_correlation, annot=True, fmt='.3f', cmap="coolwarm")
 plt.title("Correlation Heatmap of Pre-processed Stock Price Data")
 plt.savefig('../Resources/Results/heatmap_on_variable.png')
 plt.show()
+```
+
+```{python}
+# preprocessed data url
+preprocessed_url = 'https://raw.githubusercontent.com/eddiexunyc/capstone_work_project/refs/heads/main/Resources/Data/pre_process_data_final_revised.csv'
+
+preprocessed_data = pd.read_csv(preprocessed_url)
+
+# run a correlation heatmap on the features
+corr_matrix = preprocessed_data.corr()
+
+# Upper-triangle mask (hide upper triangle)
+mask = np.triu(np.ones_like(corr_matrix, dtype=bool))
+
+plt.figure(figsize=(10, 8))
+
+sns.heatmap(
+    corr_matrix,
+    mask=mask,
+    cmap='coolwarm',
+    vmin=-1, vmax=1,
+    annot=True,    # <-- show values
+    fmt=".2f",     # <-- number formatting
+    square=True,
+    linewidths=.5,
+    cbar_kws={"shrink": .8}
+)
+
+plt.title("Correlation Heatmap of Pre-processed Stock Price Data")
+plt.savefig('../Resources/Results/lower_heatmap_on_variable.png')
+plt.tight_layout()
+plt.show()
+```
+
+```{python}
+summary_table = history_data.describe()
+
+# create a subplot without frame
+plt.figure(figsize=(6, 5))
+plot = plt.subplot(111, frame_on=False)
+
+# remove axis
+plot.xaxis.set_visible(False) 
+plot.yaxis.set_visible(False) 
+
+# create the table plot and position it in the upper left corner
+table(plot, summary_table,loc='center')
+
+# save the plot as a png file
+plt.savefig('../Resources/Results/summary_plot_v3.png', dpi = 300)
 ```
