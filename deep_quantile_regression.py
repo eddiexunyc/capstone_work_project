@@ -10,7 +10,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
 # define the recursive forecasting for deep quantile regression
-def recursive_quantile_forecast(data, models, quantiles, scaler, features):
+def recursive_quantile_forecast(data, model, quantiles, scaler, features):
     
     forecast_dates = pd.date_range('2025-04-01','2025-04-30',freq='B')
     all_predictions = []
@@ -27,22 +27,21 @@ def recursive_quantile_forecast(data, models, quantiles, scaler, features):
             x = np.nan_to_num(x, nan=0.0, posinf=1e6, neginf=-1e6)
             x = scaler.transform(x)
 
-            preds = []
-            for q in quantiles:
-                preds.append(models[q].predict(x)[0][0])
+            q_preds = model.predict(x)[0]
 
             all_predictions.append({
                 "Ticker": ticker,
                 "Date": fdate,
-                "Q10": preds[0],
-                "Q50": preds[1],
-                "Q90": preds[2],
-                "Q99": preds[3]
+                "Q10": q_preds[0],
+                "Q50": q_preds[1],
+                "Q90": q_preds[2],
+                "Q99": q_preds[3]
             })
 
-            next_price = preds[1]
+            next_price = q_preds[1]
             prices = list(df["Adj Close"]) + [next_price]
 
+            # update features for next recursive step
             last['Date'] = fdate
             last['Adj Close'] = next_price
             last['Lagged_Returns'] = (next_price - df['Adj Close'].iloc[-1]) / df['Adj Close'].iloc[-1]
@@ -55,8 +54,45 @@ def recursive_quantile_forecast(data, models, quantiles, scaler, features):
             last['SMA20_Ratio'] = next_price / last['SMA_20'] if last['SMA_20']!=0 else last['SMA20_Ratio']
 
             df = pd.concat([df,last.to_frame().T], ignore_index=True)
-
+        
     return pd.DataFrame(all_predictions)
+
+
+# define the monotonic deep quantile regression to address the quantile crossing issue
+def build_monotonic_dqr_model(input_dim, quantiles=[0.1,0.5,0.9,0.99]):
+    
+    inp = tf.keras.Input(shape=(input_dim,))
+    
+    h = tf.keras.layers.Dense(64, activation='relu')(inp)
+    h = tf.keras.layers.Dense(32, activation='relu')(h)
+
+    # set the ase quantile q10
+    q10 = tf.keras.layers.Dense(1, name="q10")(h)
+
+    # define the increments for higher quantiles
+    d50 = tf.keras.layers.Dense(1, activation=tf.nn.softplus, name="d50")(h)
+    d90 = tf.keras.layers.Dense(1, activation=tf.nn.softplus, name="d90")(h)
+    d99 = tf.keras.layers.Dense(1, activation=tf.nn.softplus, name="d99")(h)
+
+    q50 = q10 + d50
+    q90 = q50 + d90
+    q99 = q90 + d99
+
+    outputs = tf.keras.layers.Concatenate(name="quantiles")([q10, q50, q90, q99])
+
+    model = tf.keras.Model(inputs=inp, outputs=outputs)
+
+    return model
+
+# define the quantile loss function
+def multi_quantile_loss(quantiles):
+    def loss(y_true, y_pred):
+        losses = []
+        for i, q in enumerate(quantiles):
+            e = y_true - y_pred[:, i]
+            losses.append(tf.reduce_mean(tf.maximum(q*e, (q-1)*e)))
+        return tf.reduce_sum(losses)
+    return loss
 
 # define the deep quantile regression
 def deep_quantile_regression(data):
@@ -88,53 +124,43 @@ def deep_quantile_regression(data):
     x_test_scaled = scaler.transform(x_test)
     x_val_scaled = scaler.transform(x_val)
 
-    # define the quantile loss
-    def q_loss(q):
-        return lambda y_true,y_pred: tf.reduce_mean(tf.maximum(q*(y_true-y_pred),(q-1)*(y_true-y_pred)))
+    # build the monotonic model
+    models = build_monotonic_dqr_model(input_dim=x_train_scaled.shape[1], quantiles=quantiles)
 
-    models = {} 
+    models.compile(optimizer='adam', loss=multi_quantile_loss(quantiles))
+
+    # train the model
+    models.fit(x_train_scaled, y_train,
+               validation_data=(x_val_scaled, y_val),
+               epochs=40,
+               batch_size=32,
+               verbose=1)
+    
+    # predict the value using the test set
+    preds = models.predict(x_test_scaled)
+
     quantile_metrics = {}
 
-    # train the model per quantile
-    for q in quantiles:
+    for i, q in enumerate(quantiles):
+        pred_q = preds[:, i]
+        e = y_test - pred_q
+        ql = np.mean(np.maximum(q*e, (q-1)*e))
+        picp = np.mean(y_test >= pred_q)
 
-        m = tf.keras.Sequential([
-            tf.keras.layers.Dense(64,activation='relu',input_shape=(x_train_scaled.shape[1],)),
-            tf.keras.layers.Dense(32,activation='relu'),
-            tf.keras.layers.Dense(1)
-        ])
+        quantile_metrics[q] = {"Quantile Loss": round(ql,6), "PICP": round(picp,4)}
+        print(f"✓ Quantile {q}: Loss={ql:.6f}, PICP={picp:.4f}")
 
-        m.compile(optimizer='adam', loss=q_loss(q))
-        m.fit(x_train_scaled,y_train,validation_data=(x_val_scaled,y_val),
-              epochs=40,batch_size=32,verbose=1)
-
-        models[q] = m
-
-       # evaluate test quantile loss
-        q_pred = m.predict(x_test_scaled).flatten()
-        ql = np.mean(np.maximum(q*(y_test-q_pred),(q-1)*(y_test-q_pred)))
-
-        # define PICP(q) = P(y >= predicted quantile)
-        picp_q = np.mean(y_test >= q_pred)
-
-        quantile_metrics[q] = {
-            "Quantile Loss": round(ql,6),
-            "PICP": round(picp_q,4)
-        }
-
-        print(f"✓ Quantile {q} → Loss={ql:.6f}, PICP={picp_q:.4f}")
-
-    lower = models[0.1].predict(x_test_scaled).flatten()
-    upper = models[0.9].predict(x_test_scaled).flatten()
-
-    interval_picp = np.mean((y_test>=lower)&(y_test<=upper))
-    print('PICP', round(interval_picp,4))
+    # calculate the PICP
+    lower = preds[:, 0]
+    upper = preds[:, 2]
+    interval_picp = np.mean((y_test>=lower) & (y_test<=upper))
+    print('Interval (Q10-Q90) PICP: ', round(interval_picp,4))
 
     # predict 30 days future horizon
     dqr_prediction = recursive_quantile_forecast(data,models,quantiles,scaler,features)
 
     # save predictions to CSV
-    dqr_file_name = 'Resources/Predictions/dqr_prediction_revised.csv'
+    dqr_file_name = 'Resources/Predictions/dqr_prediction_revised_monotonic.csv'
     dqr_prediction.to_csv(dqr_file_name, index=False)
     
     return models, dqr_prediction, quantile_metrics, interval_picp

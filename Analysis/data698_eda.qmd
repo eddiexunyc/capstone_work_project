@@ -1,5 +1,5 @@
 ---
-title: "DATA 698: Exploratory Data Analysis on Historical Data"
+title: "DATA 698: Exploratory Data Analysis"
 format: html
 editor: source
 author: Eddie Xu
@@ -120,7 +120,7 @@ summary_metric_url = 'https://raw.githubusercontent.com/eddiexunyc/capstone_work
 summary_metric = pd.read_csv(summary_metric_url)
 
 # create a subplot without frame
-plt.figure(figsize=(6, 5))
+plt.figure(figsize=(8, 6))
 plot = plt.subplot(111, frame_on=False)
 
 # remove axis
@@ -132,4 +132,27 @@ table(plot, summary_metric,loc='center')
 
 # save the plot as a png file
 plt.savefig('../Resources/Results/summary_metric.png', dpi = 300)
+```
+
+```{python}
+dqr_url = 'https://raw.githubusercontent.com/eddiexunyc/capstone_work_project/refs/heads/main/Resources/Data/summary_metric_quantile.csv'
+dqr_metric = pd.read_csv(dqr_url)
+dqr_metric = dqr_metric.drop(columns=['Quantile'])
+dqr_metric['Quantile Level'] = [0.1, 0.5, 0.9, 0.99]
+new_col = ['Quantile Level', 'Quantile Loss', 'PICP']
+dqr_metric_revised = dqr_metric.reindex(columns=new_col)
+
+# create a subplot without frame
+plt.figure(figsize=(8, 6))
+plot = plt.subplot(111, frame_on=False)
+
+# remove axis
+plot.xaxis.set_visible(False) 
+plot.yaxis.set_visible(False) 
+
+# create the table plot and position it in the upper left corner
+table(plot, dqr_metric_revised,loc='center')
+
+# save the plot as a png file
+plt.savefig('../Resources/Results/dqr_metric_revised.png', dpi = 300)
 ```

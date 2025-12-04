@@ -64,7 +64,7 @@ Per Lu, S., Xu, Q., Jiang, C., Liu, Y., & Kusiak, A. (2022) paper, the team expl
 
 ## Research Question and Hypotheses
 
-***Research Question:*** what extent Deep Quantile Regression outperforms traditional regression models (Multivariate Linear, Multivariate Polynomial, Random Forest, and Support Vector Regression) in modeling the distribution of stock returns over the 30-day forecasting horizon?
+***Research Question:*** what extent Deep Quantile Regression outperforms traditional regression models (Multivariate Linear, Multivariate Polynomial, and Random Forest Regression) in modeling the distribution of stock returns over the 30-day forecasting horizon?
 
 - ***H1 Hypotheses:*** Deep Quantile Regression provides more accurate and informative predictions of stock return distributions than traditional regression models.
 - ***Null Hypotheses:*** Deep Quantile Regression does not perform significantly better than traditional regression models in predicting stock return distributions.
@@ -140,9 +140,9 @@ The heatmap below shows the relationship among the engineered features. The orig
 
 ### Model Training
 
-The dataset was later divided into three subsets: 70% for training, 15% for hyperparameter tuning, and the remaining 15% for final performance evaluation. This approach was to provide a robust and unbiased assessment for each models’ predictive performance. The predictive performance of Deep Quantile Regression was evaluated and compared against traditional regression models. All models used the engineered features as input variables, and the target variable was the adjusted closing price for future time horizons of 30 days. For Deep Quantile Regression, the input variables was fed into the feedforward neural network with 2 hidden layers. Each model was trained independently to ensure consistency and enables a direct comparison of each model’s learning ability on historical stock price and predictive capability on forecasting stock prices. 
+The dataset was later divided into three subsets: 70% for training, 15% for hyperparameter tuning, and the remaining 15% for final performance evaluation. This approach was to provide a robust and unbiased assessment for each models’ predictive performance. The predictive performance of Deep Quantile Regression was evaluated and compared against traditional regression models. All models used the engineered features as input variables, and the target variable was the adjusted closing price for future time horizons of 30 days. For Deep Quantile Regression, the input variables was fed into the feedforward neural network with 2 hidden layers. In addition, the model was applied with monotonicity constraints to avoid the quantile crossing and ensure that the estimated quantiles are ordered properly.
 
-To assess and evaluate the predictive performance for all regression models, various metrics were used. This approach provided a comprehensive evaluation of both point prediction accuracy and uncertainty estimation. The following metrics for traditional regressions are defined below:
+Each model was trained independently to ensure consistency and enables a direct comparison of each model’s learning ability on historical stock price and predictive capability on forecasting stock prices. In order to assess and evaluate the predictive performance for all regression models, various metrics were used. This approach provided a comprehensive evaluation of both point prediction accuracy and uncertainty estimation. The following metrics for traditional regressions are defined below:
 
 - ***Root Mean Squared Error:*** the average of absolute difference between the predicted and actual value. It is used to measure how far the predicted values are from the observed actual values.
 - ***Mean Absolute Error:*** the square root of averaged squared error. It measures the average magnitude of the prediction errors from both underfitting and overfitting direction
@@ -162,13 +162,14 @@ All traditional regression models were trained and evaluated and here are the re
 
 Based on the result, it clearly shows that Multivariate Linear Regression with Ridge Regularization is the weakest model. The Multivariate Polynomial Regression with Ridge Regularization have the best accuracy out of all models, but its predictive performance is lower than Random Forest Regression. The Random Forest Regression have a best predictive performance, but its accuracy is slightly lower compared to the Polynomial Regression.
 
-The Deep Quantile Regression was trained and evaluated as well. Here is the result from the evaluation metric:
+For Deep Quantile Regression, the model was trained and evaluated on all quantiles (0.1, 0.5, 0.9, 0.99). Here is the result from the evaluation metric:
 
-![Evaluation of Deep Quantile Regression]
+![Evaluation of Deep Quantile Regression](../Resources/Results/dqr_metric_revised_v2.png)
+
+
 
 ### Models Comparsion
 
-There is no direct comparsion between traditional and Deep Quantile regressions. 
 
 ## Conclusion
 
