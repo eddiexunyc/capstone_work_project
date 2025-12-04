@@ -10,7 +10,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
 # define the recursive forecasting for deep quantile regression
-def recursive_quantile_forecast(data, model, quantiles, scaler, features):
+def recursive_quantile_forecast(data, model, quantiles, scaler, features, y_scaler):
     
     forecast_dates = pd.date_range('2025-04-01','2025-04-30',freq='B')
     all_predictions = []
@@ -19,6 +19,10 @@ def recursive_quantile_forecast(data, model, quantiles, scaler, features):
 
         df = data[data["Ticker"]==ticker].copy().sort_values("Date").reset_index(drop=True)
 
+        # skip if the data is too small
+        if df.shape[0] == 0:
+            continue
+
         for fdate in forecast_dates:
 
             last = df.iloc[-1].copy()
@@ -26,34 +30,57 @@ def recursive_quantile_forecast(data, model, quantiles, scaler, features):
             x = np.array([[ last[f] for f in features ]])
             x = np.nan_to_num(x, nan=0.0, posinf=1e6, neginf=-1e6)
             x = scaler.transform(x)
+    
+            # inverse transform to price-scale
+            q_scaled = model.predict(x, verbose=0)[0]  # shape (4,)
+            q_vals = y_scaler.inverse_transform(q_scaled.reshape(1, -1)).flatten()
 
-            q_preds = model.predict(x)[0]
-
+            # append predictions
             all_predictions.append({
                 "Ticker": ticker,
                 "Date": fdate,
-                "Q10": q_preds[0],
-                "Q50": q_preds[1],
-                "Q90": q_preds[2],
-                "Q99": q_preds[3]
+                "Q10": q_vals[0],
+                "Q50": q_vals[1],
+                "Q90": q_vals[2],
+                "Q99": q_vals[3]
             })
 
-            next_price = q_preds[1]
-            prices = list(df["Adj Close"]) + [next_price]
+            next_price = q_vals[1]
+            prices = list(df["Adj Close"].values) + [next_price]
 
             # update features for next recursive step
             last['Date'] = fdate
             last['Adj Close'] = next_price
-            last['Lagged_Returns'] = (next_price - df['Adj Close'].iloc[-1]) / df['Adj Close'].iloc[-1]
-            last['Return_1d'] = last['Lagged_Returns']
 
-            last['Return_5d'] = (next_price - prices[-6])/prices[-6] if len(prices)>=6 else last['Return_5d']
-            last['Volatility_5d']  = np.std(np.diff(prices[-6:])) if len(prices)>=6 else last['Volatility_5d']
-            last['Volatility_21d'] = np.std(np.diff(prices[-22:])) if len(prices)>=22 else last['Volatility_21d']
-            last['SMA_20'] = np.mean(prices[-20:]) if len(prices)>=20 else last['SMA_20']
-            last['SMA20_Ratio'] = next_price / last['SMA_20'] if last['SMA_20']!=0 else last['SMA20_Ratio']
+            # compute lagged returns relative to most recent actual price in df
+            try:
+                prev_price = df['Adj Close'].iloc[-1]
+                last['Lagged_Returns'] = (next_price - prev_price) / prev_price if prev_price != 0 else 0.0
+            except Exception:
+                last['Lagged_Returns'] = 0.0
 
-            df = pd.concat([df,last.to_frame().T], ignore_index=True)
+            # updates for multi-day features
+            if len(prices) >= 6:
+                last['Return_5d'] = (next_price - prices[-6]) / prices[-6] if prices[-6] != 0 else last.get('Return_5d', 0.0)
+                last['Volatility_5d'] = np.std(np.diff(prices[-6:]))
+            else:
+                last['Return_5d'] = last.get('Return_5d', 0.0)
+                last['Volatility_5d'] = last.get('Volatility_5d', 0.0)
+
+            if len(prices) >= 22:
+                last['Volatility_21d'] = np.std(np.diff(prices[-22:]))
+            else:
+                last['Volatility_21d'] = last.get('Volatility_21d', 0.0)
+
+            if len(prices) >= 20:
+                last['SMA_20'] = np.mean(prices[-20:])
+            else:
+                last['SMA_20'] = last.get('SMA_20', last.get('Adj Close', next_price))
+
+            last['SMA20_Ratio'] = next_price / last['SMA_20'] if last['SMA_20'] != 0 else last.get('SMA20_Ratio', 1.0)
+
+            # append new row to df for further recursive steps
+            df = pd.concat([df, last.to_frame().T], ignore_index=True)
         
     return pd.DataFrame(all_predictions)
 
@@ -105,7 +132,11 @@ def deep_quantile_regression(data):
 
     # define x and y variables
     x = data[features].values
-    y = data['Adj Close'].values
+    y_raw = data['Adj Close'].values.reshape(-1,1)
+
+    # scale the target variables
+    y_scaler = StandardScaler()
+    y = y_scaler.fit_transform(y_raw).flatten()
 
     ticker_labels = data['Ticker'].values
     dates = data['Date'].values if 'Date' in data.columns else np.arange(len(data))
@@ -137,27 +168,31 @@ def deep_quantile_regression(data):
                verbose=1)
     
     # predict the value using the test set
-    preds = models.predict(x_test_scaled)
+    preds_scaled = models.predict(x_test_scaled)\
+
+    # inverse transform the prediction
+    preds = y_scaler.inverse_transform(preds_scaled)
+    y_test_orig = y_scaler.inverse_transform(y_test.reshape(-1,1)).flatten()
 
     quantile_metrics = {}
 
     for i, q in enumerate(quantiles):
         pred_q = preds[:, i]
-        e = y_test - pred_q
+        e = y_test_orig - pred_q
         ql = np.mean(np.maximum(q*e, (q-1)*e))
-        picp = np.mean(y_test >= pred_q)
 
-        quantile_metrics[q] = {"Quantile Loss": round(ql,6), "PICP": round(picp,4)}
+        picp = np.mean(y_test_orig <= pred_q)
+        quantile_metrics[q] = {"Quantile Loss": round(float(ql),6), "PICP": round(float(picp),4)}
         print(f"✓ Quantile {q}: Loss={ql:.6f}, PICP={picp:.4f}")
 
     # calculate the PICP
     lower = preds[:, 0]
     upper = preds[:, 2]
-    interval_picp = np.mean((y_test>=lower) & (y_test<=upper))
-    print('Interval (Q10-Q90) PICP: ', round(interval_picp,4))
+    interval_picp = np.mean((y_test_orig >= lower) & (y_test_orig <= upper))
+    print('Interval (Q10-Q90) PICP: ', round(float(interval_picp),4))
 
     # predict 30 days future horizon
-    dqr_prediction = recursive_quantile_forecast(data,models,quantiles,scaler,features)
+    dqr_prediction = recursive_quantile_forecast(data,models,quantiles,scaler,features, y_scaler)
 
     # save predictions to CSV
     dqr_file_name = 'Resources/Predictions/dqr_prediction_revised_monotonic.csv'
@@ -175,8 +210,11 @@ def main():
     for key, value in metrics.items():
         print(f"{key}: {value}")
 
-    summary_metric_quantile = pd.DataFrame.from_dict(metrics, orient='index', columns=['Quantile', 'Quantile Loss', 'PICP'])
-    summary_metric_quantile.to_csv('Resources/Data/summary_metric_quantile.csv', index=False)
+    # save the summary metric
+    summary_metric_quantile = (pd.DataFrame.from_dict(metrics, orient='index')
+                                 .reset_index()
+                                 .rename(columns={'index':'Quantile'}))
+    summary_metric_quantile.to_csv('Resources/Data/summary_metric_quantile_revised_mono.csv', index=False)
 
 if __name__=="__main__":
     main()
