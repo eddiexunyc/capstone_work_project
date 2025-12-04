@@ -134,12 +134,17 @@ The heatmap below shows the relationship among the engineered features. The orig
 
 ![Feature Correlation Heatmap](../Resources/Results/lower_heatmap_on_variable.png){height=50%}
 
+### Model Training
+
 The dataset was later divided into three subsets: 70% for training, 15% for hyperparameter tuning, and the remaining 15% for final performance evaluation. This approach was to provide a robust and unbiased assessment for each models’ predictive performance. The predictive performance of Deep Quantile Regression was evaluated and compared against traditional regression models. All models used the engineered features as input variables, and the target variable was the adjusted closing price for future time horizons of 30 days. For Deep Quantile Regression, the input variables was fed into the feedforward neural network with 2 hidden layers. Each model was trained independently to ensure consistency and enables a direct comparison of each model’s learning ability on historical stock price and predictive capability on forecasting stock prices. 
 
-To assess and evaluate the predictive performance for all regression models, various metrics were used. This approach provided a comprehensive evaluation of both point prediction accuracy and uncertainty estimation. The following metrics are defined below:
+To assess and evaluate the predictive performance for all regression models, various metrics were used. This approach provided a comprehensive evaluation of both point prediction accuracy and uncertainty estimation. The following metrics for traditional regressions are defined below:
 
 - ***Root Mean Squared Error:*** the average of absolute difference between the predicted and actual value. It is used to measure how far the predicted values are from the observed actual values.
 - ***Mean Absolute Error:*** the square root of averaged squared error. It measures the average magnitude of the prediction errors from both underfitting and overfitting direction
+
+For Deep Quantile Regression, the model will be evaluated based on multiples quantiles (0.1, 0.5, 0.9, 0.99) with the following metrics:
+
 - ***Pinball Loss or Quantile Loss:*** the evaluation metric that is specifically designed for Deep Quantile Regression. It measures how well the predicted quantiles align with the actual outcomes
 - ***Prediction Interval Coverage Probability:*** the evaluation metric that measures the reliability of prediction intervals for Deep Quantile Regression
 
@@ -149,11 +154,13 @@ To assess and evaluate the predictive performance for all regression models, var
 
 All traditional regression models were trained and evaluated and here are the results from the evaluation metrics:
 
-![Evaluation of Traditional Regression]()
+![Evaluation of Traditional Regression](../Resources/Results/summary_metric_v2.png)
+
+Based on the result, it clearly shows that Multivariate Linear Regression with Ridge Regularization is the weakest model. The Multivariate Polynomial Regression with Ridge Regularization have the best accuracy out of all models, but its predictive performance is lower than Random Forest Regression. The Random Forest Regression have a best predictive performance, but its accuracy is slightly lower compared to the Polynomial Regression.
 
 The Deep Quantile Regression was trained and evaluated as well. Here is the result from the evaluation metric:
 
-![Evaluation of Deep Quantile Regression]()
+![Evaluation of Deep Quantile Regression]
 
 ## Conclusion
 

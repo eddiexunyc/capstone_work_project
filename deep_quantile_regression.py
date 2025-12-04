@@ -10,8 +10,53 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
 # define the recursive forecasting for deep quantile regression
-def recursive_forcasting():
-    something = ''
+def recursive_quantile_forecast(data, models, quantiles, scaler, features):
+    
+    forecast_dates = pd.date_range('2025-04-01','2025-04-30',freq='B')
+    all_predictions = []
+
+    for ticker in data["Ticker"].unique():
+
+        df = data[data["Ticker"]==ticker].copy().sort_values("Date").reset_index(drop=True)
+
+        for fdate in forecast_dates:
+
+            last = df.iloc[-1].copy()
+
+            x = np.array([[ last[f] for f in features ]])
+            x = np.nan_to_num(x, nan=0.0, posinf=1e6, neginf=-1e6)
+            x = scaler.transform(x)
+
+            preds = []
+            for q in quantiles:
+                preds.append(models[q].predict(x)[0][0])
+
+            all_predictions.append({
+                "Ticker": ticker,
+                "Date": fdate,
+                "Q10": preds[0],
+                "Q50": preds[1],
+                "Q90": preds[2],
+                "Q99": preds[3]
+            })
+
+            next_price = preds[1]
+            prices = list(df["Adj Close"]) + [next_price]
+
+            last['Date'] = fdate
+            last['Adj Close'] = next_price
+            last['Lagged_Returns'] = (next_price - df['Adj Close'].iloc[-1]) / df['Adj Close'].iloc[-1]
+            last['Return_1d'] = last['Lagged_Returns']
+
+            last['Return_5d'] = (next_price - prices[-6])/prices[-6] if len(prices)>=6 else last['Return_5d']
+            last['Volatility_5d']  = np.std(np.diff(prices[-6:])) if len(prices)>=6 else last['Volatility_5d']
+            last['Volatility_21d'] = np.std(np.diff(prices[-22:])) if len(prices)>=22 else last['Volatility_21d']
+            last['SMA_20'] = np.mean(prices[-20:]) if len(prices)>=20 else last['SMA_20']
+            last['SMA20_Ratio'] = next_price / last['SMA_20'] if last['SMA_20']!=0 else last['SMA20_Ratio']
+
+            df = pd.concat([df,last.to_frame().T], ignore_index=True)
+
+    return pd.DataFrame(all_predictions)
 
 # define the deep quantile regression
 def deep_quantile_regression(data):
@@ -19,8 +64,8 @@ def deep_quantile_regression(data):
     # define features and quantiles
     features = ['Lagged_Returns', 'Return_1d', 'Return_5d', 'Volatility_5d', 'Volatility_21d',
                 'RSI', 'SMA_20', 'MACD', 'SMA20_Ratio', 'log_Volume']
-
-    num_q = len(quantiles)
+    
+    quantiles=[0.1, 0.5, 0.9, 0.99]
 
     # define x and y variables
     x = data[features].values
@@ -28,9 +73,6 @@ def deep_quantile_regression(data):
 
     ticker_labels = data['Ticker'].values
     dates = data['Date'].values if 'Date' in data.columns else np.arange(len(data))
-
-    # define the qunatile
-    quantiles=[0.1, 0.5, 0.9, 0.99]
 
     # split train data into 70% for training and 30% for tuning and performance
     x_train, x_temp, y_train, y_temp, ticker_train, ticker_temp, date_train, date_temp = train_test_split(
@@ -46,108 +88,69 @@ def deep_quantile_regression(data):
     x_test_scaled = scaler.transform(x_test)
     x_val_scaled = scaler.transform(x_val)
 
+    # define the quantile loss
+    def q_loss(q):
+        return lambda y_true,y_pred: tf.reduce_mean(tf.maximum(q*(y_true-y_pred),(q-1)*(y_true-y_pred)))
 
-    # define Quantile Loss
-    def quantile_loss(q, y_true, y_pred):
-        err = y_true - y_pred
-        return tf.reduce_mean(tf.maximum(q * err, (q - 1) * err))
-    
-    # define PICP (need to fix later about this)
-    def PICP(q, y_true, y_lower_pred, y_upper_pred):
-        # check which true values fall within the predicted interval
-        is_covered = (y_true >= y_lower_pred) & (y_true <= y_upper_pred)
-        
-        # count the number of covered observations
-        num_covered = np.sum(is_covered)
-        
-        # Total number of observations
-        n = len(y_true)
-        
-        # Calculate PICP
-        picp = num_covered / n
-        
-        return picp 
+    models = {} 
+    quantile_metrics = {}
 
-    # run a loop for each quantile
-    prediction_result = {}
-
+    # train the model per quantile
     for q in quantiles:
 
-        model = tf.keras.Sequential([
-            tf.keras.layers.Dense(64, activation='relu', input_shape=(x_train_scaled.shape[1],)),
-            tf.keras.layers.Dense(32, activation='relu'),
+        m = tf.keras.Sequential([
+            tf.keras.layers.Dense(64,activation='relu',input_shape=(x_train_scaled.shape[1],)),
+            tf.keras.layers.Dense(32,activation='relu'),
             tf.keras.layers.Dense(1)
         ])
 
-        model.compile(optimizer='adam', loss=lambda y_true, y_pred: quantile_loss(q, y_true, y_pred))
+        m.compile(optimizer='adam', loss=q_loss(q))
+        m.fit(x_train_scaled,y_train,validation_data=(x_val_scaled,y_val),
+              epochs=40,batch_size=32,verbose=1)
 
-        # stop to prevent overfitting
-        early_stop = tf.keras.callbacks.EarlyStopping(
-            monitor='val_loss', patience=5, restore_best_weights=True
-        )
+        models[q] = m
 
-        # train the model
-        history = model.fit(
-            x_train_scaled, y_train,
-            validation_data=(x_val_scaled, y_val),
-            epochs=50,
-            batch_size=32,
-            verbose=1,
-            callbacks = [early_stop]
-        )
+       # evaluate test quantile loss
+        q_pred = m.predict(x_test_scaled).flatten()
+        ql = np.mean(np.maximum(q*(y_test-q_pred),(q-1)*(y_test-q_pred)))
 
-        # evaluate model
-        val_loss = model.evaluate(x_val_scaled, y_val, verbose=0)
-        test_loss = model.evaluate(x_test_scaled, y_test, verbose=0)
-        print(f"Quantile {q}: Validation Loss = {val_loss:.4f}, Test Loss = {test_loss:.4f}")
+        # define PICP(q) = P(y >= predicted quantile)
+        picp_q = np.mean(y_test >= q_pred)
 
-        # predictions
-        y_pred = model.predict(x_test_scaled).flatten()
-
-        # store results
-        prediction_result[q] = {
-            'model': model,
-            'val_loss': val_loss,
-            'test_loss': test_loss,
-            'history': history
+        quantile_metrics[q] = {
+            "Quantile Loss": round(ql,6),
+            "PICP": round(picp_q,4)
         }
 
-    # provide the future predicted value
-    future_df_list = []
-    forecast_dates = pd.date_range(start='2025-04-01', end='2025-04-30', freq='B')
+        print(f"✓ Quantile {q} → Loss={ql:.6f}, PICP={picp_q:.4f}")
 
-    for company in data['Ticker'].unique():
-        last_row = data[data['Ticker'] == company].iloc[-1]
-        for fdate in forecast_dates:
-            row = last_row.copy()
-            row['Date'] = fdate
-            future_df_list.append(row)
+    lower = models[0.1].predict(x_test_scaled).flatten()
+    upper = models[0.9].predict(x_test_scaled).flatten()
 
-    future_df = pd.DataFrame(future_df_list)
-    x_future_scaled = scaler.transform(future_df[features])
+    interval_picp = np.mean((y_test>=lower)&(y_test<=upper))
+    print('PICP', round(interval_picp,4))
 
-
-    # combine predictions and sort it by dates
-    dqr_prediction = future_df[['Ticker', 'Date']].copy()
-    for q in quantiles:
-        y_pred = prediction_result[q]['model'].predict(x_future_scaled).flatten()
-        dqr_prediction[f'Predicted_Quantile_{q}'] = y_pred
-
-    dqr_prediction = dqr_prediction.sort_values(['Ticker', 'Date']).reset_index(drop=True)
+    # predict 30 days future horizon
+    dqr_prediction = recursive_quantile_forecast(data,models,quantiles,scaler,features)
 
     # save predictions to CSV
     dqr_file_name = 'Resources/Predictions/dqr_prediction_revised.csv'
     dqr_prediction.to_csv(dqr_file_name, index=False)
     
-    return prediction_result, scaler, dqr_prediction
+    return models, dqr_prediction, quantile_metrics, interval_picp
 
 def main():
 
      # read in data
-    pre_process_url = 'https://raw.githubusercontent.com/eddiexunyc/capstone_work_project/refs/heads/main/Resources/pre_process_data_v2.csv'
+    pre_process_url = 'https://raw.githubusercontent.com/eddiexunyc/capstone_work_project/refs/heads/main/Resources/Data/pre_process_data_final_revised.csv'
     pre_process_data = pd.read_csv(pre_process_url)
 
-    results, scaler, pred_df = deep_quantile_regression(pre_process_data)
+    models, forecast, metrics, interval_picp = deep_quantile_regression(pre_process_data)
+    for key, value in metrics.items():
+        print(f"{key}: {value}")
+
+    summary_metric_quantile = pd.DataFrame([metrics])
+    summary_metric_quantile.to_csv('Resources/Data/summary_metric_quantile.csv', index=False)
 
 if __name__=="__main__":
     main()

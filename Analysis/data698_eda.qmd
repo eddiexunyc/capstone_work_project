@@ -115,7 +115,9 @@ plt.show()
 ```
 
 ```{python}
-summary_table = history_data.describe()
+summary_metric_url = 'https://raw.githubusercontent.com/eddiexunyc/capstone_work_project/refs/heads/main/Resources/Data/summary_metric_revised.csv'
+
+summary_metric = pd.read_csv(summary_metric_url)
 
 # create a subplot without frame
 plt.figure(figsize=(6, 5))
@@ -126,8 +128,8 @@ plot.xaxis.set_visible(False)
 plot.yaxis.set_visible(False) 
 
 # create the table plot and position it in the upper left corner
-table(plot, summary_table,loc='center')
+table(plot, summary_metric,loc='center')
 
 # save the plot as a png file
-plt.savefig('../Resources/Results/summary_plot_v3.png', dpi = 300)
+plt.savefig('../Resources/Results/summary_metric.png', dpi = 300)
 ```
