@@ -1,2 +1,5 @@
-0.1,0.5,0.9,0.99
-"{'Quantile Loss': np.float64(0.086932), 'PICP': np.float64(0.9406)}","{'Quantile Loss': np.float64(0.129334), 'PICP': np.float64(0.7106)}","{'Quantile Loss': np.float64(0.065469), 'PICP': np.float64(0.0972)}","{'Quantile Loss': np.float64(0.0335), 'PICP': np.float64(0.0002)}"
+Quantile,Quantile Loss,PICP
+,0.094609,0.7142
+,0.118337,0.7366
+,0.117133,0.0049
+,0.06054,0.0001

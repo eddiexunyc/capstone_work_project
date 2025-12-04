@@ -149,7 +149,7 @@ def main():
     for key, value in metrics.items():
         print(f"{key}: {value}")
 
-    summary_metric_quantile = pd.DataFrame([metrics])
+    summary_metric_quantile = pd.DataFrame.from_dict(metrics, orient='index', columns=['Quantile', 'Quantile Loss', 'PICP'])
     summary_metric_quantile.to_csv('Resources/Data/summary_metric_quantile.csv', index=False)
 
 if __name__=="__main__":
