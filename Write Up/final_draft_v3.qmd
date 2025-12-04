@@ -20,7 +20,7 @@ format:
 
 ## Abstract
 
-Stock price prediction plays a vital role in financial decision-making, assisting investors and institutions in managing risk and optimizing returns. Traditional regression models including Linear Regression, Polynomial Regression, and Random Forest Regression are widely used but are limited on predicting the conditional mean of stock returns. This approach fails to capture the uncertainty and asymmetry inherent in financial markets.To address these limitations, this capstone project explores the application of Deep Quantile Regression (DQR) for stock return prediction and evaluates its effectiveness relative to traditional regression models. DQR utilizes deep neural networks to estimate multiple conditional quantiles, allowing for the construction of prediction intervals that reflect a wider range of potential outcomes. Using historical stock data, the study compares DQR and traditional models in terms of predictive accuracy, robustness, and their ability to capture market uncertainty. The findings aim to support more informed and risk-aware investment strategies.
+Stock price prediction is very important in financial decision-making, assisting investors and institutions in managing risk and optimizing returns. Traditional regression models including Linear Regression, Polynomial Regression, and Random Forest Regression are widely used but are limited on predicting the conditional mean of stock returns. This approach fails to capture the uncertainty and asymmetry inherent in financial markets. This capstone project explores the application of Deep Quantile Regression (DQR) for stock return prediction and evaluates its effectiveness relative to traditional regression models. DQR utilizes deep neural networks to estimate multiple conditional quantiles, allowing for a wider range of prediction intervals. The study compares DQR and traditional models in terms of predictive accuracy, robustness, and their ability to capture the market uncertainty, using evaluation metrics such as Root Mean Squared Error (RMSE), Mean Absolute Error (MAE), Quantile Loss, and Prediction Interval Coverage Probability (PICP). Results show that Polynomial and Random Forest Regression have a reasonable accuracy, it only provide the mean of stock price predictions where the Deep Quantile Regression provides the full distribution and performs very well at the tail end of the distribution.
 
 ## Introduction
 
@@ -164,16 +164,17 @@ Based on the result, it clearly shows that Multivariate Linear Regression with R
 
 For Deep Quantile Regression, the model was trained and evaluated on all quantiles (0.1, 0.5, 0.9, 0.99). Here is the result from the evaluation metric:
 
-![Evaluation of Deep Quantile Regression](../Resources/Results/dqr_metric_revised_v2.png)
+![Evaluation of Deep Quantile Regression](../Resources/Results/dqr_metric_mono.png)
 
-
+The values from Quantile Loss show that the model has high accuracy precision at the extremes of the distribution (0.1, 0.99). However, the accuracy is lower in the central quantiles (0.5, 0.9), indicating that the model may underestimated the variablity. This is further evidenced by the PICP values, where the tail end quantiles have coverages close to their expected values. In addition, the model predicts values that are too low or too narrow in the middle of the distribution.
 
 ### Models Comparsion
 
+By comparing the results from all models, it shows that Deep Quantile Regression provides more accurate and informative predictions of stock return distributions than traditional regression models by providing the full distribution of stock price forecasting. The Multivariate Polynomial Regression with Ridge Regularization have the best accuracy, followed by the Random Forest Regression, based on the values from RSME. However, this only shows the conditional mean of stock price forecasting. The Deep Quantile Regression captures the shape, spread, and asymmetry of future stock price returns. The Quantile Loss and PICP values show how well the model performs on the tail end of the distribution which is an insight that cannot be provided by Multivariate Polynomial and Random Forest Regression. 
 
 ## Conclusion
 
-In conclusion, 
+In conclusion, the project shows that Deep Quantile Regression provides many siginificant advantages over traditional regression models. While models like Polynomial Regression and Random Forest Regression effectively estimate the conditional mean, they fail to capture the uncertainty and asymmetry inherent in financial markets. The Deep Quantile Regression addresses that by predicting multiple quantiles. This provides a comprehensive view of the full distribution of future stock returns. In additon, the evaluation metrics show that the model not only delivers competitive accuracy compared to traditional model but also excels at modeling tail risks. These advantages makes the Deep Quantile Regression a vialable alternatives in stock price forcasting.
 
 
 {{< pagebreak >}}
